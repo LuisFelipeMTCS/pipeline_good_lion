@@ -56,6 +56,11 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     con = duckdb.connect()
+    # Sem limite o DuckDB usa até 80% da RAM e foi morto pelo kernel (OOM) lendo ~25 GB de CSV.
+    # Com limite, o que não couber vai para disco.
+    con.execute(f"SET memory_limit = '{os.environ.get('DUCKDB_MEMORY_LIMIT', '3GB')}'")
+    con.execute("SET threads = 4")
+    con.execute("SET preserve_insertion_order = false")
     endpoint = os.environ.get("S3_ENDPOINT", "http://localhost:9000")
     con.execute(
         "CREATE SECRET minio (TYPE s3, KEY_ID ?, SECRET ?, ENDPOINT ?, URL_STYLE 'path', USE_SSL ?)",

@@ -7,13 +7,12 @@ Tickets em fatias verticais (tracer bullets) gerados a partir do [PRD](../PRD.md
 ## Quadro
 
 ### Pronto para começar
-_(nenhum: tudo depende do 01)_
+- [02 — Tracer local: empresas ativas por UF no Metabase](02-tracer-local-ativas-por-uf.md)
+- [03 — Base AWS em Terraform e amostra catalogada](03-base-aws-terraform.md) (primeiro ticket com custo na AWS)
 
 ### Bloqueado
 | # | Ticket | Bloqueado por |
 |---|---|---|
-| 02 | [Tracer local: empresas ativas por UF no Metabase](02-tracer-local-ativas-por-uf.md) | 01 |
-| 03 | [Base AWS em Terraform e amostra catalogada](03-base-aws-terraform.md) | 01 |
 | 04 | [Primeiro job visual: Bronze de Estabelecimentos com Bookmarks](04-bronze-estabelecimentos-visual.md) | 03 |
 | 05 | [Ingestão da Receita rodando na AWS](05-ingestao-receita-aws.md) | 03 |
 | 06 | [Alertas de falha por e-mail e observabilidade](06-alertas-e-observabilidade.md) | 04 |
@@ -30,10 +29,10 @@ _(nenhum: tudo depende do 01)_
 | 17 | [Rodada final na base completa](17-rodada-final-base-completa.md) | 15, 16 |
 
 ### Em andamento
-- [01 — Ambiente local e amostra AC/AP/RR](01-ambiente-local-e-amostra.md): código pronto e testado; falta a ingestão real dos 2 meses e a geração da amostra
+_(vazio)_
 
 ### Concluído
-_(vazio)_
+- [01 — Ambiente local e amostra AC/AP/RR](01-ambiente-local-e-amostra.md)
 
 ## Grafo de dependências
 

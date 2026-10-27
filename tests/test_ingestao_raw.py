@@ -40,3 +40,17 @@ def test_reprocessar_o_mes_substitui_a_particao_inteira(s3_raw, receita_falsa):
         "empresas/ano_mes=2026-09/Empresas0.csv",
         "simples/ano_mes=2026-09/Simples.csv",
     ]
+
+
+def test_ingerir_so_uma_tabela_nao_toca_nas_outras(s3_raw, receita_falsa):
+    s3, bucket, prefixo = s3_raw
+    s3.put_object(Bucket=bucket, Key=f"{prefixo}empresas/ano_mes=2026-09/Empresas0.csv", Body=b"intacto")
+
+    ingerir_mes("2026-09", s3, bucket, prefixo, base_url=receita_falsa, tabelas=["simples"])
+
+    assert _chaves(s3, bucket, prefixo) == [
+        "empresas/ano_mes=2026-09/Empresas0.csv",
+        "simples/ano_mes=2026-09/Simples.csv",
+    ]
+    empresas = s3.get_object(Bucket=bucket, Key=f"{prefixo}empresas/ano_mes=2026-09/Empresas0.csv")
+    assert empresas["Body"].read() == b"intacto"

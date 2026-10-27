@@ -112,10 +112,15 @@ def _limpar_prefixo(s3, bucket, prefixo):
             s3.delete_objects(Bucket=bucket, Delete={"Objects": objetos})
 
 
-def ingerir_mes(ano_mes, s3, bucket, prefixo="", base_url=BASE_URL):
-    """Baixa o mês da Receita e grava cada arquivo em <prefixo><tabela>/ano_mes=<ano_mes>/ no bucket."""
+def ingerir_mes(ano_mes, s3, bucket, prefixo="", base_url=BASE_URL, tabelas=None):
+    """Baixa o mês da Receita e grava cada arquivo em <prefixo><tabela>/ano_mes=<ano_mes>/ no bucket.
+
+    `tabelas` restringe a ingestão a algumas tabelas (ex.: refazer só uma que falhou).
+    """
     with _abrir_url(f"{base_url}/{ano_mes}/", "PROPFIND") as resposta:
         arquivos = arquivos_do_mes(resposta.read())
+    if tabelas:
+        arquivos = {nome: tabela for nome, tabela in arquivos.items() if tabela in tabelas}
 
     # Idempotência: a partição do mês é substituída inteira, sem sobras de rodadas anteriores.
     for tabela in set(arquivos.values()):
@@ -141,11 +146,13 @@ def main(argv=None):
     parser.add_argument("--ano_mes", required=True, help="AAAA-MM")
     parser.add_argument("--bucket", required=True)
     parser.add_argument("--prefixo", default="")
+    parser.add_argument("--tabelas", default="", help="lista separada por vírgula; vazio = todas")
     args, _ = parser.parse_known_args(argv)  # o Glue injeta argumentos próprios
 
     # S3_ENDPOINT aponta para o MinIO local; na AWS fica vazio e o boto3 usa o S3.
     s3 = boto3.client("s3", endpoint_url=os.environ.get("S3_ENDPOINT") or None)
-    ingerir_mes(args.ano_mes, s3, args.bucket, args.prefixo)
+    tabelas = [t for t in args.tabelas.split(",") if t]
+    ingerir_mes(args.ano_mes, s3, args.bucket, args.prefixo, tabelas=tabelas)
 
 
 if __name__ == "__main__":

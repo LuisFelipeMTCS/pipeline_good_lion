@@ -1,5 +1,6 @@
 # Comandos do ambiente local. Uso: make <alvo> [ANO_MES=AAAA-MM]
 ANO_MES ?= 2026-09
+TABELAS ?=
 # Variáveis do .env (credenciais do MinIO, endpoint S3). Crie com: cp .env.example .env
 PY := uv run --env-file .env python
 
@@ -20,8 +21,8 @@ test:
 lint:
 	uv run ruff check .
 
-ingest:  ## baixa o mês da Receita para o bucket raw do MinIO
-	$(PY) -m ingest.receita --ano_mes $(ANO_MES) --bucket raw
+ingest:  ## baixa o mês da Receita para o raw do MinIO (TABELAS=simples,cnaes restringe)
+	$(PY) -m ingest.receita --ano_mes $(ANO_MES) --bucket raw --tabelas "$(TABELAS)"
 
 amostra:  ## gera a amostra AC/AP/RR do mês em raw/sample/
 	$(PY) -m amostra.gerar_amostra --ano_mes $(ANO_MES)
