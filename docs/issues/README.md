@@ -1,13 +1,13 @@
 # Backlog — Pipeline Good Lion
 
-Tickets em fatias verticais (tracer bullets) gerados a partir do [PRD](../docs/PRD.md). Cada ticket é um arquivo; o campo **Bloqueado por** de cada um é a fonte da verdade das dependências.
+Tickets em fatias verticais (tracer bullets) gerados a partir do [PRD](../PRD.md). Cada ticket é um arquivo; o campo **Bloqueado por** de cada um é a fonte da verdade das dependências.
 
 **Como usar:** pegue qualquer ticket da coluna "Pronto para começar" (todos os bloqueios concluídos). Ao terminar, mude o **Status** no arquivo para `done`, marque os critérios e mova a linha aqui no quadro.
 
 ## Quadro
 
 ### Pronto para começar
-- [01 — Ambiente local e amostra AC/AP/RR](01-ambiente-local-e-amostra.md)
+_(nenhum: tudo depende do 01)_
 
 ### Bloqueado
 | # | Ticket | Bloqueado por |
@@ -30,7 +30,7 @@ Tickets em fatias verticais (tracer bullets) gerados a partir do [PRD](../docs/P
 | 17 | [Rodada final na base completa](17-rodada-final-base-completa.md) | 15, 16 |
 
 ### Em andamento
-_(vazio)_
+- [01 — Ambiente local e amostra AC/AP/RR](01-ambiente-local-e-amostra.md): código pronto e testado; falta a ingestão real dos 2 meses e a geração da amostra
 
 ### Concluído
 _(vazio)_

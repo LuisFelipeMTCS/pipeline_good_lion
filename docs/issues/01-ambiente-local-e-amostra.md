@@ -4,11 +4,11 @@
 
 **Bloqueado por:** nada (pode começar já)
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
-- [ ] `docker compose` sobe glue-libs (Glue 5), MinIO, Postgres e Metabase sem erro
-- [ ] `ingest_receita` lista o mês no WebDAV, baixa os ZIPs (sem Sócios), converte de latin1 para UTF-8, adiciona cabeçalho com os nomes do SDK da Base dos Dados e grava no `raw` do MinIO
-- [ ] A ingestão recebe o mês e o destino (MinIO ou S3) como parâmetro; a virada para a AWS é só trocar parâmetro e credenciais
+- [x] `docker compose` sobe glue-libs (Glue 5), MinIO, Postgres e Metabase sem erro
+- [x] `ingest_receita` lista o mês no WebDAV, baixa os ZIPs (sem Sócios), converte de latin1 para UTF-8, adiciona cabeçalho com os nomes do SDK da Base dos Dados e grava no `raw` do MinIO
+- [x] A ingestão recebe o mês e o destino (MinIO ou S3) como parâmetro; a virada para a AWS é só trocar parâmetro e credenciais
 - [ ] A amostra de 2026-09 e 2026-10 foi gerada com DuckDB e está no MinIO
 - [ ] Consistência da amostra verificada: toda empresa tem ao menos um estabelecimento e todo registro do Simples tem empresa correspondente
 - [ ] Contagens por tabela e por mês da amostra anotadas (servem de referência para os testes seguintes)

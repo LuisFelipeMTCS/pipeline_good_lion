@@ -1,20 +1,9 @@
-# Python
-__pycache__/
-*.pyc
 .venv/
+__pycache__/
 .pytest_cache/
 .ruff_cache/
-
-# Ambiente e segredos
+logs/
 .env
-*.env
-
-# Terraform
-.terraform/
 *.tfstate
 *.tfstate.*
-*.tfvars
-crash.log
-
-# Execução local
-logs/
+.terraform/
