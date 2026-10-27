@@ -1,0 +1,5 @@
+line-length = 120
+target-version = "py39"  # job Python shell do Glue roda 3.9
+
+[lint]
+select = ["E", "F", "W", "I", "B", "UP"]

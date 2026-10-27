@@ -1,0 +1,76 @@
+# Ambiente local do pipeline (PRD, seção 9).
+# A imagem oficial do MinIO saiu do Docker Hub; pgsty/minio é o fork mantido pela comunidade.
+services:
+  minio:
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-goodlion}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-goodlion123}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      retries: 20
+
+  # Cria os buckets das camadas uma vez e sai.
+  minio-init:
+    image: pgsty/mc:RELEASE.2026-09-16T00-00-00Z
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      sh -c "mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD}
+      && mc mb -p local/raw local/bronze local/silver local/gold local/artifacts"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-goodlion}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-goodlion123}
+
+  postgres:
+    image: postgres:16.15
+    environment:
+      POSTGRES_DB: dashboard
+      POSTGRES_USER: ${POSTGRES_USER:-goodlion}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-goodlion123}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d dashboard"]
+      interval: 5s
+      retries: 20
+
+  metabase:
+    image: metabase/metabase:v0.64.3.2
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${METABASE_PORT:-3001}:3000"  # 3000 costuma estar ocupada por outros projetos
+    volumes:
+      - metabase-data:/metabase-data
+    environment:
+      MB_DB_FILE: /metabase-data/metabase.db
+
+  # Spark + bibliotecas do Glue 5 para rodar jobs e testes: docker compose exec glue ...
+  glue:
+    image: public.ecr.aws/glue/aws-glue-libs:5.0.10
+    entrypoint: ["sleep", "infinity"]
+    working_dir: /home/hadoop/workspace
+    volumes:
+      - .:/home/hadoop/workspace
+    environment:
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-goodlion}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-goodlion123}
+      AWS_REGION: us-east-1
+      S3_ENDPOINT: http://minio:9000
+
+volumes:
+  minio-data:
+  postgres-data:
+  metabase-data:
