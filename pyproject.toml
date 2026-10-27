@@ -1,0 +1,17 @@
+[project]
+name = "pipeline-good-lion"
+version = "0.1.0"
+description = "Data Lake de CNPJ da Receita Federal no AWS Glue (projeto Infnet)"
+# Ambiente local de desenvolvimento. O código de ingestão continua compatível com 3.9
+# (job Python shell do Glue): o ruff checa isso via target-version.
+requires-python = ">=3.12"
+dependencies = [
+    "boto3==1.43.119",
+    "duckdb==2.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "ruff==0.14.0",
+]
