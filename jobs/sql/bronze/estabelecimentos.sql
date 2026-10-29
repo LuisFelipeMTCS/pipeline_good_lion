@@ -1,0 +1,36 @@
+-- Nó SQL Query do Glue Studio: entrada com alias raw_estabelecimentos.
+-- Tipagem (SDK da Base dos Dados): datas AAAAMMDD viram DATE ('00000000' e vazio viram nulo);
+-- códigos ficam como texto para não perder os zeros à esquerda.
+SELECT
+    cnpj_basico,
+    cnpj_ordem,
+    cnpj_dv,
+    CAST(identificador_matriz_filial AS INT) AS identificador_matriz_filial,
+    nome_fantasia,
+    situacao_cadastral,
+    to_date(data_situacao_cadastral, 'yyyyMMdd') AS data_situacao_cadastral,
+    motivo_situacao_cadastral,
+    nome_cidade_exterior,
+    id_pais,
+    to_date(data_inicio_atividade, 'yyyyMMdd') AS data_inicio_atividade,
+    cnae_fiscal_principal,
+    cnae_fiscal_secundaria,
+    tipo_logradouro,
+    logradouro,
+    numero,
+    complemento,
+    bairro,
+    cep,
+    sigla_uf,
+    id_municipio_rf,
+    ddd_1,
+    telefone_1,
+    ddd_2,
+    telefone_2,
+    ddd_fax,
+    fax,
+    email,
+    situacao_especial,
+    to_date(data_situacao_especial, 'yyyyMMdd') AS data_situacao_especial,
+    ano_mes
+FROM raw_estabelecimentos

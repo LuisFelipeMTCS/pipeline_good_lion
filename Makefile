@@ -4,7 +4,7 @@ TABELAS ?=
 # Variáveis do .env (credenciais do MinIO, endpoint S3). Crie com: cp .env.example .env
 PY := uv run --env-file .env python
 
-.PHONY: setup up down test lint ingest amostra
+.PHONY: setup up down test test-spark lint ingest amostra pipeline dashboard-load
 
 setup:  ## cria o .venv e instala as dependências travadas no uv.lock
 	uv sync
@@ -18,6 +18,9 @@ down:
 test:
 	uv run --env-file .env pytest -q
 
+test-spark:  ## testes que precisam de Spark, dentro do container do Glue
+	docker compose exec -T -e PYTHONDONTWRITEBYTECODE=1 glue python3 -m pytest -q -p no:cacheprovider tests/test_pipeline_estabelecimentos.py
+
 lint:
 	uv run ruff check .
 
@@ -26,3 +29,9 @@ ingest:  ## baixa o mês da Receita para o raw do MinIO (TABELAS=simples,cnaes r
 
 amostra:  ## gera a amostra AC/AP/RR do mês em raw/sample/
 	$(PY) -m amostra.gerar_amostra --ano_mes $(ANO_MES)
+
+pipeline:  ## bronze → silver → gold de Estabelecimentos da amostra, no container do Glue
+	docker compose exec -T glue python3 -m jobs.local --ano_mes $(ANO_MES)
+
+dashboard-load:  ## carrega o mês da Gold no Postgres e atualiza as visões do Metabase
+	$(PY) -m dashboard.carga --ano_mes $(ANO_MES)

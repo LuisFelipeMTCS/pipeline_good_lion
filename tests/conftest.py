@@ -30,6 +30,18 @@ def s3_raw():
         s3.delete_object(Bucket="raw", Key=obj["Key"])
 
 
+@pytest.fixture(scope="session")
+def spark():
+    """SparkSession local com Delta (só no container do Glue)."""
+    pytest.importorskip("pyspark")
+    from jobs.spark import criar_spark
+
+    sessao = criar_spark(master="local[1]")
+    sessao.conf.set("spark.sql.shuffle.partitions", "1")
+    yield sessao
+    sessao.stop()
+
+
 def _zip(conteudo_latin1):
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as z:
@@ -73,3 +85,22 @@ def receita_falsa():
     threading.Thread(target=servidor.serve_forever, daemon=True).start()
     yield f"http://127.0.0.1:{servidor.server_port}/webdav"
     servidor.shutdown()
+
+
+@pytest.fixture
+def postgres():
+    """Banco exclusivo do teste no Postgres do docker compose (apagado ao final). Devolve o conninfo."""
+    psycopg = pytest.importorskip("psycopg")
+    base = (
+        f"host=localhost port=5432 user={os.environ.get('POSTGRES_USER', 'goodlion')} "
+        f"password={os.environ.get('POSTGRES_PASSWORD', 'goodlion123')}"
+    )
+    try:
+        admin = psycopg.connect(f"{base} dbname=dashboard", autocommit=True)
+    except psycopg.OperationalError:
+        pytest.skip("Postgres fora do ar: rode `docker compose up -d postgres`")
+    nome = f"teste_{uuid.uuid4().hex[:8]}"
+    admin.execute(f"CREATE DATABASE {nome}")
+    yield f"{base} dbname={nome}"
+    admin.execute(f"DROP DATABASE {nome} WITH (FORCE)")
+    admin.close()
