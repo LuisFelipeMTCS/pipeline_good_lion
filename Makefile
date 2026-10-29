@@ -4,7 +4,7 @@ TABELAS ?=
 # Variáveis do .env (credenciais do MinIO, endpoint S3). Crie com: cp .env.example .env
 PY := uv run --env-file .env python
 
-.PHONY: setup up down test test-spark lint ingest amostra pipeline dashboard-load
+.PHONY: setup up down test test-spark lint ingest amostra amostra-aws pipeline dashboard-load
 
 setup:  ## cria o .venv e instala as dependências travadas no uv.lock
 	uv sync
@@ -29,6 +29,12 @@ ingest:  ## baixa o mês da Receita para o raw do MinIO (TABELAS=simples,cnaes r
 
 amostra:  ## gera a amostra AC/AP/RR do mês em raw/sample/
 	$(PY) -m amostra.gerar_amostra --ano_mes $(ANO_MES)
+
+amostra-aws:  ## envia a amostra do MinIO para s3://goodlion-raw-<conta>/sample/ (perfil default da AWS)
+	rm -rf /tmp/goodlion-amostra
+	uv run --env-file .env sh -c 'aws --endpoint-url "$$S3_ENDPOINT" s3 sync s3://raw/sample /tmp/goodlion-amostra'
+	aws s3 sync --delete /tmp/goodlion-amostra s3://goodlion-raw-$$(aws sts get-caller-identity --query Account --output text)/sample
+	rm -rf /tmp/goodlion-amostra
 
 pipeline:  ## bronze → silver → gold de Estabelecimentos da amostra, no container do Glue
 	docker compose exec -T glue python3 -m jobs.local --ano_mes $(ANO_MES)

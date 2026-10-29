@@ -7,7 +7,7 @@ Tickets em fatias verticais (tracer bullets) gerados a partir do [PRD](../PRD.md
 ## Quadro
 
 ### Pronto para começar
-- [03 — Base AWS em Terraform e amostra catalogada](03-base-aws-terraform.md) (primeiro ticket com custo na AWS)
+_(vazio)_
 
 ### Bloqueado
 | # | Ticket | Bloqueado por |
@@ -29,6 +29,7 @@ Tickets em fatias verticais (tracer bullets) gerados a partir do [PRD](../PRD.md
 
 ### Em andamento
 - [02 — Tracer local: empresas ativas por UF no Metabase](02-tracer-local-ativas-por-uf.md) (falta o gráfico no Metabase)
+- [03 — Base AWS em Terraform e amostra catalogada](03-base-aws-terraform.md) (falta o `apply` na AWS)
 
 ### Concluído
 - [01 — Ambiente local e amostra AC/AP/RR](01-ambiente-local-e-amostra.md)
