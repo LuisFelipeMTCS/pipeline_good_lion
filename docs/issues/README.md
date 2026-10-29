@@ -8,16 +8,15 @@ Tickets em fatias verticais (tracer bullets) gerados a partir do [PRD](../PRD.md
 
 ### Pronto para começar
 - [05 — Ingestão da Receita rodando na AWS](05-ingestao-receita-aws.md)
+- [06 — Alertas de falha por e-mail e observabilidade](06-alertas-e-observabilidade.md)
+- [07 — Municípios Receita × IBGE → dim_municipio](07-municipios-receita-ibge.md)
+- [10 — PII mascarado na Bronze](10-pii-mascarado-na-bronze.md)
 
 ### Bloqueado
 | # | Ticket | Bloqueado por |
 |---|---|---|
-| 04 | [Primeiro job visual: Bronze de Estabelecimentos com Bookmarks](04-bronze-estabelecimentos-visual.md) | 02, 03 |
-| 06 | [Alertas de falha por e-mail e observabilidade](06-alertas-e-observabilidade.md) | 04 |
-| 07 | [Municípios Receita × IBGE → dim_municipio](07-municipios-receita-ibge.md) | 03, 04 |
 | 08 | [Pergunta 1: MEI/ME/EPP/Demais por região](08-pergunta-1-categorias-por-regiao.md) | 02, 04, 07 |
 | 09 | [Pergunta 2: capital social por região](09-pergunta-2-capital-social.md) | 08 |
-| 10 | [PII mascarado na Bronze](10-pii-mascarado-na-bronze.md) | 04 |
 | 11 | [Data Quality na Silver](11-data-quality-silver.md) | 08 |
 | 12 | [Pergunta 3: aberturas e fechamentos via CDC](12-pergunta-3-cdc-movimentacao.md) | 08 |
 | 13 | [Arquivos pequenos: OPTIMIZE/VACUUM com evidência](13-arquivos-pequenos-optimize-vacuum.md) | 08 |
@@ -32,6 +31,7 @@ Tickets em fatias verticais (tracer bullets) gerados a partir do [PRD](../PRD.md
 ### Concluído
 - [01 — Ambiente local e amostra AC/AP/RR](01-ambiente-local-e-amostra.md)
 - [03 — Base AWS em Terraform e amostra catalogada](03-base-aws-terraform.md)
+- [04 — Primeiro job visual: Bronze de Estabelecimentos com Bookmarks](04-bronze-estabelecimentos-visual.md) (feito antes de fechar o 02: só dependia do SQL da Bronze, que já estava pronto)
 
 ## Grafo de dependências
 

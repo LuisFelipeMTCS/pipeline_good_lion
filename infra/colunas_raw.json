@@ -1,0 +1,76 @@
+{
+  "empresas": [
+    "cnpj_basico",
+    "razao_social",
+    "natureza_juridica",
+    "qualificacao_responsavel",
+    "capital_social",
+    "porte",
+    "ente_federativo"
+  ],
+  "estabelecimentos": [
+    "cnpj_basico",
+    "cnpj_ordem",
+    "cnpj_dv",
+    "identificador_matriz_filial",
+    "nome_fantasia",
+    "situacao_cadastral",
+    "data_situacao_cadastral",
+    "motivo_situacao_cadastral",
+    "nome_cidade_exterior",
+    "id_pais",
+    "data_inicio_atividade",
+    "cnae_fiscal_principal",
+    "cnae_fiscal_secundaria",
+    "tipo_logradouro",
+    "logradouro",
+    "numero",
+    "complemento",
+    "bairro",
+    "cep",
+    "sigla_uf",
+    "id_municipio_rf",
+    "ddd_1",
+    "telefone_1",
+    "ddd_2",
+    "telefone_2",
+    "ddd_fax",
+    "fax",
+    "email",
+    "situacao_especial",
+    "data_situacao_especial"
+  ],
+  "simples": [
+    "cnpj_basico",
+    "opcao_simples",
+    "data_opcao_simples",
+    "data_exclusao_simples",
+    "opcao_mei",
+    "data_opcao_mei",
+    "data_exclusao_mei"
+  ],
+  "cnaes": [
+    "codigo",
+    "descricao"
+  ],
+  "motivos": [
+    "codigo",
+    "descricao"
+  ],
+  "municipios": [
+    "codigo",
+    "descricao"
+  ],
+  "naturezas": [
+    "codigo",
+    "descricao"
+  ],
+  "paises": [
+    "codigo",
+    "descricao"
+  ],
+  "qualificacoes": [
+    "codigo",
+    "descricao"
+  ]
+}

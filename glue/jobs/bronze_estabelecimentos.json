@@ -1,0 +1,79 @@
+{
+  "Name": "bronze_estabelecimentos",
+  "Description": "raw (CSV) -> bronze (Delta) de Estabelecimentos, com Job Bookmarks",
+  "Role": "arn:aws:iam::724793286570:role/glue-pipeline",
+  "GlueVersion": "5.0",
+  "WorkerType": "G.1X",
+  "NumberOfWorkers": 2,
+  "ExecutionClass": "FLEX",
+  "MaxRetries": 1,
+  "Timeout": 30,
+  "Command": {
+    "Name": "glueetl",
+    "ScriptLocation": "s3://goodlion-artifacts-724793286570/scripts/bronze_estabelecimentos.py",
+    "PythonVersion": "3"
+  },
+  "DefaultArguments": {
+    "--conf": "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension --conf spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog",
+    "--ambiente": "sample",
+    "--job-bookmark-option": "job-bookmark-enable",
+    "--job-language": "python",
+    "--datalake-formats": "delta",
+    "--TempDir": "s3://goodlion-artifacts-724793286570/temporary/",
+    "--bucket": "goodlion-bronze-724793286570"
+  },
+  "CodeGenConfigurationNodes": {
+    "node-raw": {
+      "CatalogSource": {
+        "Name": "raw_estabelecimentos",
+        "Database": "goodlion_raw",
+        "Table": "estabelecimentos",
+        "PartitionPredicate": ""
+      }
+    },
+    "node-gravar": {
+      "CustomCode": {
+        "Name": "gravar_delta",
+        "Inputs": [
+          "node-sql"
+        ],
+        "Code": "@arquivo:jobs/custom/gravar_delta.py",
+        "ClassName": "GravarDelta"
+      }
+    },
+    "node-esquema": {
+      "CustomCode": {
+        "Name": "garantir_esquema",
+        "Inputs": [
+          "node-raw"
+        ],
+        "Code": "@arquivo:jobs/custom/garantir_esquema.py",
+        "ClassName": "GarantirEsquema"
+      }
+    },
+    "node-selecionar": {
+      "SelectFromCollection": {
+        "Name": "selecionar",
+        "Inputs": [
+          "node-esquema"
+        ],
+        "Index": 0
+      }
+    },
+    "node-sql": {
+      "SparkSQL": {
+        "Name": "bronze_estabelecimentos",
+        "Inputs": [
+          "node-selecionar"
+        ],
+        "SqlQuery": "@arquivo:jobs/sql/bronze/estabelecimentos.sql",
+        "SqlAliases": [
+          {
+            "From": "node-selecionar",
+            "Alias": "raw_estabelecimentos"
+          }
+        ]
+      }
+    }
+  }
+}

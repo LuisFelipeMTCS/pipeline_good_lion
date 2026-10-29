@@ -26,7 +26,7 @@ Pastas, nomes e padrões: [ARQUITETURA](../ARQUITETURA.md).
 
 **Como rodar:** `cd infra && terraform apply`, depois `make amostra-aws` e o crawler `goodlion-raw` (console ou `aws glue start-crawler --name goodlion-raw`).
 
-**Crawler do `raw`:** 9 tabelas em `goodlion_raw`, uma por pasta de `sample/` (nível 3 do agrupamento; sem isso os domínios, que têm o mesmo esquema, virariam uma tabela só), todas com `OpenCSVSerde` (sem aspas nos valores) e partição `ano_mes`.
+**Crawler do `raw`:** as 9 tabelas de `goodlion_raw` são criadas pelo Terraform (`aws_glue_catalog_table`, colunas de `infra/colunas_raw.json`, tudo texto, `OpenCSVSerde`, partição `ano_mes`) e o crawler aponta para elas (`catalog_target`): só acrescenta partições e colunas novas. *Corrigido no ticket 04:* a primeira versão deixava o crawler deduzir o esquema, e ele criava `cnpj_basico`, datas e códigos como `bigint` (zeros à esquerda perdidos), mesmo com `CustomDatatypes = STRING` no classificador.
 
 **Athena (workgroup `goodlion`):** as 18 contagens por tabela e mês batem exatamente com o ticket 01. Estabelecimentos de 2026-09 por UF: AC 167.930, AP 161.673, RR 144.520. As duas consultas de conferência leram 427 MB (~US$ 0,002).
 
