@@ -7,13 +7,12 @@ Tickets em fatias verticais (tracer bullets) gerados a partir do [PRD](../PRD.md
 ## Quadro
 
 ### Pronto para começar
-_(vazio)_
+- [05 — Ingestão da Receita rodando na AWS](05-ingestao-receita-aws.md)
 
 ### Bloqueado
 | # | Ticket | Bloqueado por |
 |---|---|---|
 | 04 | [Primeiro job visual: Bronze de Estabelecimentos com Bookmarks](04-bronze-estabelecimentos-visual.md) | 02, 03 |
-| 05 | [Ingestão da Receita rodando na AWS](05-ingestao-receita-aws.md) | 03 |
 | 06 | [Alertas de falha por e-mail e observabilidade](06-alertas-e-observabilidade.md) | 04 |
 | 07 | [Municípios Receita × IBGE → dim_municipio](07-municipios-receita-ibge.md) | 03, 04 |
 | 08 | [Pergunta 1: MEI/ME/EPP/Demais por região](08-pergunta-1-categorias-por-regiao.md) | 02, 04, 07 |
@@ -29,10 +28,10 @@ _(vazio)_
 
 ### Em andamento
 - [02 — Tracer local: empresas ativas por UF no Metabase](02-tracer-local-ativas-por-uf.md) (falta o gráfico no Metabase)
-- [03 — Base AWS em Terraform e amostra catalogada](03-base-aws-terraform.md) (falta o `apply` na AWS)
 
 ### Concluído
 - [01 — Ambiente local e amostra AC/AP/RR](01-ambiente-local-e-amostra.md)
+- [03 — Base AWS em Terraform e amostra catalogada](03-base-aws-terraform.md)
 
 ## Grafo de dependências
 
