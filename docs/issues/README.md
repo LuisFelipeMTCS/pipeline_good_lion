@@ -7,7 +7,6 @@ Tickets em fatias verticais (tracer bullets) gerados a partir do [PRD](../PRD.md
 ## Quadro
 
 ### Pronto para começar
-- [05 — Ingestão da Receita rodando na AWS](05-ingestao-receita-aws.md)
 - [06 — Alertas de falha por e-mail e observabilidade](06-alertas-e-observabilidade.md)
 - [07 — Municípios Receita × IBGE → dim_municipio](07-municipios-receita-ibge.md)
 - [10 — PII mascarado na Bronze](10-pii-mascarado-na-bronze.md)
@@ -32,6 +31,7 @@ Tickets em fatias verticais (tracer bullets) gerados a partir do [PRD](../PRD.md
 - [01 — Ambiente local e amostra AC/AP/RR](01-ambiente-local-e-amostra.md)
 - [03 — Base AWS em Terraform e amostra catalogada](03-base-aws-terraform.md)
 - [04 — Primeiro job visual: Bronze de Estabelecimentos com Bookmarks](04-bronze-estabelecimentos-visual.md) (feito antes de fechar o 02: só dependia do SQL da Bronze, que já estava pronto)
+- [05 — Ingestão da Receita rodando na AWS](05-ingestao-receita-aws.md)
 
 ## Grafo de dependências
 

@@ -52,6 +52,7 @@ pipeline_good_lion/
 │   ├── catalog.tf               # bancos goodlion_<camada>
 │   ├── colunas_raw.json         # colunas das tabelas do raw no Catalog (um teste garante que batem com a ingestão)
 │   ├── crawlers.tf              # tabelas do raw (tudo texto) + crawler que só acrescenta partições/colunas; e o da silver/gold
+│   ├── ingestao.tf              # jobs Python shell de ingestão (código enviado ao artifacts)
 │   ├── workflow.tf              # Glue Workflow e gatilhos
 │   ├── databrew.tf              # receita de limpeza do IBGE e perfilamento
 │   ├── monitoring.tf            # EventBridge → SNS (e-mail), logs e dashboard do CloudWatch

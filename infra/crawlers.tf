@@ -38,7 +38,7 @@ resource "aws_glue_catalog_table" "raw" {
 
   # Depois de criada, a tabela é do crawler (partições, colunas novas, parâmetros dele).
   lifecycle {
-    ignore_changes = [parameters, storage_descriptor]
+    ignore_changes = [owner, parameters, storage_descriptor]
   }
 }
 
@@ -64,5 +64,6 @@ resource "aws_glue_crawler" "raw" {
       Tables     = { AddOrUpdateBehavior = "MergeNewColumns" }
       Partitions = { AddOrUpdateBehavior = "InheritFromTable" }
     }
+    Grouping = { TableGroupingPolicy = "CombineCompatibleSchemas" } # padrão da AWS; declarado para não aparecer como diferença
   })
 }
