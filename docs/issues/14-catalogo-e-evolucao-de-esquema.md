@@ -6,8 +6,8 @@
 
 **Status:** ready-for-agent
 
-- [ ] Crawler único para Silver e Gold criado pelo Terraform
+- [ ] Crawler único para Silver e Gold criado pelo Terraform (`infra/crawlers.tf`), gravando nos bancos `goodlion_silver` e `goodlion_gold`
 - [ ] Todas as tabelas Silver e Gold aparecem no Catalog e respondem no Athena
 - [ ] Teste controlado: adicionar uma coluna numa tabela, rodar o crawler e ver a nova versão no histórico do Catalog
-- [ ] Evidência (histórico de versões) registrada para o relatório
+- [ ] Evidência (histórico de versões) registrada em `docs/evidencias/`
 - [ ] Teste controlado revertido depois de registrado

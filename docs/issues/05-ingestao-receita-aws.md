@@ -8,7 +8,7 @@
 
 **Status:** ready-for-agent
 
-- [ ] Job Python shell criado pelo Terraform, com o código no `artifacts`
+- [ ] Job Python shell criado pelo Terraform, com o `ingest/receita.py` enviado para o `artifacts`
 - [ ] Baixa um mês completo (sem Sócios) e grava em `raw/<tabela>/ano_mes=AAAA-MM/` em UTF-8 e com cabeçalho
 - [ ] Os arquivos grandes (`Empresas0`, `Estabelecimentos0`) são processados em fluxo, sem estourar a memória do job
 - [ ] Tempo total do download e custo da execução anotados

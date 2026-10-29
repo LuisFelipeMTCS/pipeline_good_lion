@@ -6,9 +6,9 @@
 
 **Status:** ready-for-agent
 
-- [ ] Job de manutenção (Custom Transform) rodando `OPTIMIZE` e `VACUUM` nas tabelas Bronze, Silver e Gold
+- [ ] Job de manutenção com o Custom Transform `jobs/custom/manutencao.py`, rodando `OPTIMIZE` e `VACUUM` nas tabelas Bronze, Silver e Gold
 - [ ] Medição "antes" na amostra sem tratamento: quantidade de arquivos por partição e tamanho médio
 - [ ] Consulta de referência no Athena com volume lido e tempo registrados antes e depois
 - [ ] Medição "depois" com os mesmos indicadores
-- [ ] Tabela comparativa antes/depois salva no repositório
+- [ ] Tabela comparativa antes/depois salva em `docs/evidencias/`
 - [ ] Após o `VACUUM`, a tabela continua íntegra e consultável

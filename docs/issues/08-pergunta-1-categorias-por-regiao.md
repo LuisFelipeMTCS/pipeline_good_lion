@@ -8,18 +8,21 @@ Regras de negócio (PRD, seção 6):
 - **Localização:** município do estabelecimento matriz.
 - Sem `dim_empresa`.
 
+Pastas, nomes e padrões: [ARQUITETURA](../ARQUITETURA.md).
+
 > É o maior ticket. Se ficar grande demais, separar em "Bronze/Silver + dimensões" e "fato + dashboard".
 
 **Bloqueado por:** 02, 04, 07
 
 **Status:** ready-for-agent
 
-- [ ] Jobs visuais da Bronze de Empresas e Simples, seguindo o padrão do ticket 04 (Bookmarks, parâmetros, JSON versionado)
-- [ ] Jobs visuais da Silver de Empresas, Estabelecimentos e Simples, limitados por `--ano_mes`
-- [ ] `dim_categoria` (4 linhas), `dim_cnae`, `dim_natureza_juridica` e `dim_tempo` na Gold
+- [ ] Jobs visuais da Bronze de Empresas e Simples, seguindo o padrão do ticket 04 (Bookmarks, parâmetros, JSON em `glue/jobs/` com o SQL de `jobs/sql/bronze/` injetado pelo deploy)
+- [ ] Jobs visuais da Silver de Empresas, Estabelecimentos e Simples, limitados por `--ano_mes`, com SQL em `jobs/sql/silver/` (a de Estabelecimentos já existe desde o ticket 02)
+- [ ] `dim_categoria` (4 linhas), `dim_cnae`, `dim_natureza_juridica` e `dim_tempo` na Gold, com SQL em `jobs/sql/gold/`
 - [ ] `fato_empresa_mensal` com grão 1 empresa ativa × `ano_mes`, `cnpj_basico` como dimensão degenerada, medidas `capital_social` e `qtd_estabelecimentos`
-- [ ] Testes locais com pytest para a regra de categoria (incluindo MEI com data de exclusão e MEI com porte 01)
+- [ ] Testes locais com pytest (via `jobs/local.py`) para a regra de categoria (incluindo MEI com data de exclusão e MEI com porte 01)
 - [ ] Reprocessar o mesmo `ano_mes` dá o mesmo resultado
 - [ ] Crawler ou registro manual deixa a fato e as dimensões consultáveis no Athena
-- [ ] Visões materializadas por município, UF e região no Postgres
+- [ ] Visões materializadas por município, UF e região no Postgres (`dashboard/schema.sql`)
 - [ ] Gráficos no Metabase com contagem e proporção por categoria nos três níveis
+- [ ] A Gold provisória `ativas_por_uf` do ticket 02 sai de cena: SQL, job no `jobs/local.py`, tabela e visão no `dashboard/schema.sql` e testes removidos (a contagem de ativas passa a vir da `fato_empresa_mensal`)

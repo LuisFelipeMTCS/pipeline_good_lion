@@ -15,4 +15,4 @@
 - [ ] `make dashboard-load` para os dois meses
 - [ ] Metabase com as 3 perguntas respondidas por município, UF e região
 - [ ] Custo total do projeto conferido no Billing (meta: abaixo de US$ 10)
-- [ ] Prints e números de evidência (DQ, antes/depois, Catalog, alertas, dashboard) reunidos para o relatório
+- [ ] Prints e números de evidência (DQ, antes/depois, Catalog, alertas, dashboard) reunidos em `docs/evidencias/` para o relatório

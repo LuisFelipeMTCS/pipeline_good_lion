@@ -6,9 +6,9 @@
 
 **Status:** ready-for-agent
 
-- [ ] Workflow e gatilhos criados pelo Terraform, na ordem: ingestões em paralelo → crawler do `raw` → Bronzes em paralelo → DataBrew do IBGE → Silvers + consolidada → dimensões → fatos → manutenção → crawler Silver/Gold
+- [ ] Workflow e gatilhos criados pelo Terraform (`infra/workflow.tf`), na ordem: ingestões em paralelo → crawler do `raw` → Bronzes em paralelo → DataBrew do IBGE → Silvers + consolidada → dimensões → fatos → manutenção → crawler Silver/Gold
 - [ ] Gatilho mensal (dia 20) e gatilho sob demanda
-- [ ] Todos os jobs com 1 nova tentativa e timeout próprio
+- [ ] Todos os jobs visuais publicados pelo `scripts/deploy_jobs.py` a partir de `glue/jobs/`, com 1 nova tentativa e timeout próprio
 - [ ] Execução completa na amostra termina com sucesso
 - [ ] Prova de retomada: forçar falha num passo do meio, corrigir e retomar a partir dele
 - [ ] Prova de idempotência: rodar o mesmo mês duas vezes e comparar as contagens da Gold

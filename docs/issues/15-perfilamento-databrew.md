@@ -6,7 +6,7 @@
 
 **Status:** ready-for-agent
 
-- [ ] Dataset e job de perfilamento do DataBrew criados pelo Terraform
+- [ ] Dataset e job de perfilamento do DataBrew criados pelo Terraform (`infra/databrew.tf`)
 - [ ] Agenda própria configurada
 - [ ] Perfil gerado sobre a amostra, com resultado gravado no `artifacts`
 - [ ] Custo da execução anotado

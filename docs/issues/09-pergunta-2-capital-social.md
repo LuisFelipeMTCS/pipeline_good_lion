@@ -6,7 +6,7 @@
 
 **Status:** ready-for-agent
 
-- [ ] Visões materializadas com mediana e soma de `capital_social` por município, UF e região, com a mediana já calculada no Postgres
+- [ ] Visões materializadas com mediana e soma de `capital_social` por município, UF e região, com a mediana já calculada no Postgres (`dashboard/schema.sql`)
 - [ ] Gráficos no Metabase com mediana e soma nos três níveis
 - [ ] Texto explicativo no dashboard: capital social declarado na abertura, não é faturamento nem lucro
 - [ ] Conferência manual da mediana de uma UF da amostra contra uma consulta direta na Gold
