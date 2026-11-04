@@ -1,0 +1,6 @@
+Rules = [
+    IsComplete "id_municipio_ibge",
+    IsUnique "id_municipio_rf",
+    IsUnique "id_municipio_ibge",
+    IsComplete "regiao"
+]

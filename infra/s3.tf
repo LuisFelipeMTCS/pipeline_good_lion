@@ -37,3 +37,12 @@ resource "aws_s3_bucket_lifecycle_configuration" "raw" {
 output "buckets" {
   value = local.buckets
 }
+
+# Tabelas de referência versionadas no repositório, lidas pelos jobs (ex.: correções Receita × IBGE).
+resource "aws_s3_object" "referencias" {
+  for_each = fileset("${path.module}/../jobs/referencias", "*.csv")
+  bucket   = aws_s3_bucket.camada["artifacts"].id
+  key      = "referencias/${each.key}"
+  source   = "${path.module}/../jobs/referencias/${each.key}"
+  etag     = filemd5("${path.module}/../jobs/referencias/${each.key}")
+}

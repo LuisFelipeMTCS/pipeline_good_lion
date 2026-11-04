@@ -54,7 +54,8 @@ pipeline_good_lion/
 │   ├── crawlers.tf              # tabelas do raw (tudo texto) + crawler que só acrescenta partições/colunas; e o da silver/gold
 │   ├── ingestao.tf              # jobs Python shell de ingestão (código enviado ao artifacts)
 │   ├── workflow.tf              # Glue Workflow e gatilhos
-│   ├── databrew.tf              # receita de limpeza do IBGE e perfilamento
+│   ├── databrew.tf              # receita de limpeza do IBGE e perfilamento (pilha do CloudFormation)
+│   ├── databrew_receita_ibge.json # passos da receita do IBGE
 │   ├── monitoring.tf            # EventBridge → SNS (e-mail), logs e dashboard do CloudWatch
 │   └── budget.tf                # alertas em US$ 5 e US$ 8 (o Budgets avisa, não bloqueia gastos)
 │
@@ -69,6 +70,7 @@ pipeline_good_lion/
 │   │   ├── silver/              # limpeza, padronização, regra de empresa ativa
 │   │   └── gold/                # dim_* e fato_* (esquema estrela)
 │   ├── quality/                 # regras DQDL dos nós Evaluate Data Quality
+│   ├── referencias/             # tabelas manuais versionadas (correções Receita × IBGE), enviadas ao artifacts
 │   ├── custom/                  # corpo dos nós Custom Transform (o Glue embrulha numa função)
 │   │   ├── garantir_esquema.py  # Bronze: dá as colunas do Catalog ao lote vazio do Bookmark
 │   │   ├── gravar_delta.py      # Bronze: grava Delta com replaceWhere nos meses do lote
@@ -126,7 +128,9 @@ Catalog (goodlion_raw.<tabela>) → GarantirEsquema → SelectFromCollection →
 - **Marcadores:** no JSON, todo valor `"@arquivo:<caminho>"` vira o conteúdo do arquivo no deploy. O `exportar_job.py` faz o caminho inverso: uma edição de SQL feita no editor visual volta para o `.sql`.
 - **Parâmetros nos nós:** nenhum nó visual aceita parâmetro do job nas propriedades (banco, tabela, caminho e predicado são texto fixo). Os parâmetros só chegam ao código dos Custom Transforms, via `getResolvedOptions(sys.argv)`.
 - **Custom Transform:** o campo `Code` é o **corpo** da função; o Glue o embrulha em `def <ClassName>(glueContext, dfc)`. Por isso os arquivos de `jobs/custom/` têm `return` solto. Para usar a saída num nó seguinte, é preciso um `SelectFromCollection`.
-- **Gravação:** o nó Target Delta do Studio não tem `replaceWhere`, então a gravação é o Custom Transform `GravarDelta`. Ele tira o nome da tabela do nome do job (`bronze_<tabela>`) e substitui só os meses presentes no lote.
+- **Gravação:** o nó Target Delta do Studio não tem `replaceWhere`, então a gravação é o Custom Transform `GravarDelta`. Ele substitui só os meses presentes no lote; tabela sem `ano_mes` (dimensão) é regravada inteira.
+- **Nome da tabela vem do nó anterior (ticket 07):** o Glue entrega ao Custom Transform um `dfc` com a chave `<Name do nó anterior>_<id do nó sem hífens>` (ex.: `bronze_cnaes_nodesqlcnaes`). Por isso o nó que alimenta o `GravarDelta` se chama `<camada>_<tabela>`, e a origem que alimenta o `GarantirEsquema` se chama `raw_<tabela>`. É o que permite um job só gravar várias tabelas (`bronze_dominios`, 6 ramos). O `tests/test_deploy_jobs.py` confere a regra em todos os JSON.
+- **Domínios e IBGE sem recorte:** o domínio de municípios e a lista do IBGE são do Brasil inteiro mesmo na amostra. A saída do DataBrew fica em `silver/ibge_municipios/` (Parquet, sem `sample/`).
 - **Bookmark sem arquivos novos:** a origem vem **sem colunas** e o SQL falharia; o `GarantirEsquema` devolve um lote vazio com as colunas do Catalog.
 - **Origem pelo Catalog:** é ela que traz a coluna `ano_mes` (partição). O esquema do raw é do Terraform, tudo texto: o crawler deduzia `bigint` e o `cnpj_basico` perdia os zeros à esquerda.
 - **Nomes na API:** o nó SQL Query se chama `SparkSQL` no JSON.

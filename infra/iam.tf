@@ -24,6 +24,8 @@ resource "aws_iam_role_policy" "glue_buckets" {
         Action   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
         Resource = [for b in aws_s3_bucket.camada : "${b.arn}/*"]
       },
+      # trigger_databrew: dispara e acompanha o job de limpeza do IBGE.
+      { Effect = "Allow", Action = ["databrew:StartJobRun", "databrew:DescribeJobRun"], Resource = "*" },
     ]
   })
 }

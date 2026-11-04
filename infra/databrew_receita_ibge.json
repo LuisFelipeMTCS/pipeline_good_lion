@@ -1,0 +1,18 @@
+[
+  {"Action": {"Operation": "UNNEST_STRUCT", "Parameters": {"SourceColumn": "regiao-imediata", "RemoveSourceColumn": "true"}}},
+  {"Action": {"Operation": "UNNEST_STRUCT", "Parameters": {"SourceColumn": "regiao-imediata.regiao-intermediaria", "RemoveSourceColumn": "true"}}},
+  {"Action": {"Operation": "UNNEST_STRUCT", "Parameters": {"SourceColumn": "regiao-imediata.regiao-intermediaria.UF", "RemoveSourceColumn": "true"}}},
+  {"Action": {"Operation": "UNNEST_STRUCT", "Parameters": {"SourceColumn": "regiao-imediata.regiao-intermediaria.UF.regiao", "RemoveSourceColumn": "true"}}},
+  {"Action": {"Operation": "RENAME", "Parameters": {"SourceColumn": "id", "TargetColumn": "id_municipio_ibge"}}},
+  {"Action": {"Operation": "RENAME", "Parameters": {"SourceColumn": "regiao-imediata.regiao-intermediaria.UF.sigla", "TargetColumn": "sigla_uf"}}},
+  {"Action": {"Operation": "RENAME", "Parameters": {"SourceColumn": "regiao-imediata.regiao-intermediaria.UF.regiao.nome", "TargetColumn": "regiao"}}},
+  {"Action": {"Operation": "DELETE", "Parameters": {"SourceColumns": "[\"microrregiao\",\"regiao-imediata.id\",\"regiao-imediata.nome\",\"regiao-imediata.regiao-intermediaria.id\",\"regiao-imediata.regiao-intermediaria.nome\",\"regiao-imediata.regiao-intermediaria.UF.id\",\"regiao-imediata.regiao-intermediaria.UF.nome\",\"regiao-imediata.regiao-intermediaria.UF.regiao.id\",\"regiao-imediata.regiao-intermediaria.UF.regiao.sigla\"]"}}},
+  {"Action": {"Operation": "DUPLICATE", "Parameters": {"SourceColumn": "nome", "TargetColumn": "nome_normalizado"}}},
+  {"Action": {"Operation": "UPPER_CASE", "Parameters": {"SourceColumn": "nome_normalizado"}}},
+  {"Action": {"Operation": "REPLACE_TEXT", "Parameters": {"SourceColumn": "nome_normalizado", "Pattern": "[ÁÀÂÃÄ]", "Value": "A"}}},
+  {"Action": {"Operation": "REPLACE_TEXT", "Parameters": {"SourceColumn": "nome_normalizado", "Pattern": "[ÉÈÊË]", "Value": "E"}}},
+  {"Action": {"Operation": "REPLACE_TEXT", "Parameters": {"SourceColumn": "nome_normalizado", "Pattern": "[ÍÌÎÏ]", "Value": "I"}}},
+  {"Action": {"Operation": "REPLACE_TEXT", "Parameters": {"SourceColumn": "nome_normalizado", "Pattern": "[ÓÒÔÕÖ]", "Value": "O"}}},
+  {"Action": {"Operation": "REPLACE_TEXT", "Parameters": {"SourceColumn": "nome_normalizado", "Pattern": "[ÚÙÛÜ]", "Value": "U"}}},
+  {"Action": {"Operation": "REPLACE_TEXT", "Parameters": {"SourceColumn": "nome_normalizado", "Pattern": "Ç", "Value": "C"}}}
+]

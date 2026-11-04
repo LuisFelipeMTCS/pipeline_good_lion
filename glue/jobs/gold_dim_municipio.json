@@ -1,0 +1,122 @@
+{
+  "Name": "gold_dim_municipio",
+  "Description": "dim_municipio: Receita x IBGE com tabela de correções e regra bloqueante de DQ",
+  "Role": "arn:aws:iam::724793286570:role/glue-pipeline",
+  "GlueVersion": "5.0",
+  "WorkerType": "G.1X",
+  "NumberOfWorkers": 2,
+  "ExecutionClass": "FLEX",
+  "MaxRetries": 1,
+  "Timeout": 30,
+  "Command": {
+    "Name": "glueetl",
+    "ScriptLocation": "s3://goodlion-artifacts-724793286570/scripts/gold_dim_municipio.py",
+    "PythonVersion": "3"
+  },
+  "DefaultArguments": {
+    "--conf": "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension --conf spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog",
+    "--ambiente": "sample",
+    "--job-bookmark-option": "job-bookmark-disable",
+    "--job-language": "python",
+    "--datalake-formats": "delta",
+    "--TempDir": "s3://goodlion-artifacts-724793286570/temporary/",
+    "--bucket": "goodlion-gold-724793286570",
+    "--enable-continuous-cloudwatch-log": "true"
+  },
+  "CodeGenConfigurationNodes": {
+    "node-municipios": {
+      "S3DeltaSource": {
+        "Name": "bronze_municipios",
+        "Paths": [
+          "s3://goodlion-bronze-724793286570/sample/municipios/"
+        ]
+      }
+    },
+    "node-estabelecimentos": {
+      "S3DeltaSource": {
+        "Name": "bronze_estabelecimentos",
+        "Paths": [
+          "s3://goodlion-bronze-724793286570/sample/estabelecimentos/"
+        ]
+      }
+    },
+    "node-ibge": {
+      "S3ParquetSource": {
+        "Name": "silver_ibge_municipios",
+        "Paths": [
+          "s3://goodlion-silver-724793286570/ibge_municipios/"
+        ]
+      }
+    },
+    "node-correcoes": {
+      "S3CsvSource": {
+        "Name": "municipios_correcoes",
+        "Paths": [
+          "s3://goodlion-artifacts-724793286570/referencias/municipios_correcoes.csv"
+        ],
+        "Separator": "comma",
+        "QuoteChar": "quote",
+        "WithHeader": true
+      }
+    },
+    "node-sql": {
+      "SparkSQL": {
+        "Name": "dim_municipio_sql",
+        "Inputs": [
+          "node-municipios",
+          "node-estabelecimentos",
+          "node-ibge",
+          "node-correcoes"
+        ],
+        "SqlQuery": "@arquivo:jobs/sql/gold/dim_municipio.sql",
+        "SqlAliases": [
+          {
+            "From": "node-municipios",
+            "Alias": "bronze_municipios"
+          },
+          {
+            "From": "node-estabelecimentos",
+            "Alias": "bronze_estabelecimentos"
+          },
+          {
+            "From": "node-ibge",
+            "Alias": "silver_ibge_municipios"
+          },
+          {
+            "From": "node-correcoes",
+            "Alias": "municipios_correcoes"
+          }
+        ]
+      }
+    },
+    "node-dq": {
+      "EvaluateDataQuality": {
+        "Name": "gold_dim_municipio",
+        "Inputs": [
+          "node-sql"
+        ],
+        "Ruleset": "@arquivo:jobs/quality/gold_dim_municipio.dqdl",
+        "Output": "PrimaryInput",
+        "PublishingOptions": {
+          "EvaluationContext": "gold_dim_municipio",
+          "ResultsS3Prefix": "s3://goodlion-artifacts-724793286570/dq/",
+          "CloudWatchMetricsEnabled": false,
+          "ResultsPublishingEnabled": true
+        },
+        "StopJobOnFailureOptions": {
+          "StopJobOnFailureTiming": "Immediate"
+        }
+      }
+    },
+    "node-gravar": {
+      "CustomCode": {
+        "Name": "gravar_delta",
+        "Inputs": [
+          "node-dq"
+        ],
+        "Code": "@arquivo:jobs/custom/gravar_delta.py",
+        "ClassName": "GravarDelta"
+      }
+    }
+  }
+}

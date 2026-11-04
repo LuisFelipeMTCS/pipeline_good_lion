@@ -1,0 +1,340 @@
+{
+  "Name": "bronze_dominios",
+  "Description": "raw (CSV) -> bronze (Delta) dos 6 domínios da Receita, com Job Bookmarks",
+  "Role": "arn:aws:iam::724793286570:role/glue-pipeline",
+  "GlueVersion": "5.0",
+  "WorkerType": "G.1X",
+  "NumberOfWorkers": 2,
+  "ExecutionClass": "FLEX",
+  "MaxRetries": 1,
+  "Timeout": 30,
+  "Command": {
+    "Name": "glueetl",
+    "ScriptLocation": "s3://goodlion-artifacts-724793286570/scripts/bronze_dominios.py",
+    "PythonVersion": "3"
+  },
+  "DefaultArguments": {
+    "--conf": "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension --conf spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog",
+    "--ambiente": "sample",
+    "--job-bookmark-option": "job-bookmark-enable",
+    "--job-language": "python",
+    "--datalake-formats": "delta",
+    "--TempDir": "s3://goodlion-artifacts-724793286570/temporary/",
+    "--bucket": "goodlion-bronze-724793286570",
+    "--enable-continuous-cloudwatch-log": "true"
+  },
+  "CodeGenConfigurationNodes": {
+    "node-raw-cnaes": {
+      "CatalogSource": {
+        "Name": "raw_cnaes",
+        "Database": "goodlion_raw",
+        "Table": "cnaes",
+        "PartitionPredicate": ""
+      }
+    },
+    "node-esquema-cnaes": {
+      "CustomCode": {
+        "Name": "garantir_esquema_cnaes",
+        "Inputs": [
+          "node-raw-cnaes"
+        ],
+        "Code": "@arquivo:jobs/custom/garantir_esquema.py",
+        "ClassName": "GarantirEsquemaCnaes"
+      }
+    },
+    "node-selecionar-cnaes": {
+      "SelectFromCollection": {
+        "Name": "selecionar_cnaes",
+        "Inputs": [
+          "node-esquema-cnaes"
+        ],
+        "Index": 0
+      }
+    },
+    "node-sql-cnaes": {
+      "SparkSQL": {
+        "Name": "bronze_cnaes",
+        "Inputs": [
+          "node-selecionar-cnaes"
+        ],
+        "SqlQuery": "@arquivo:jobs/sql/bronze/cnaes.sql",
+        "SqlAliases": [
+          {
+            "From": "node-selecionar-cnaes",
+            "Alias": "raw_cnaes"
+          }
+        ]
+      }
+    },
+    "node-gravar-cnaes": {
+      "CustomCode": {
+        "Name": "gravar_cnaes",
+        "Inputs": [
+          "node-sql-cnaes"
+        ],
+        "Code": "@arquivo:jobs/custom/gravar_delta.py",
+        "ClassName": "GravarDeltaCnaes"
+      }
+    },
+    "node-raw-motivos": {
+      "CatalogSource": {
+        "Name": "raw_motivos",
+        "Database": "goodlion_raw",
+        "Table": "motivos",
+        "PartitionPredicate": ""
+      }
+    },
+    "node-esquema-motivos": {
+      "CustomCode": {
+        "Name": "garantir_esquema_motivos",
+        "Inputs": [
+          "node-raw-motivos"
+        ],
+        "Code": "@arquivo:jobs/custom/garantir_esquema.py",
+        "ClassName": "GarantirEsquemaMotivos"
+      }
+    },
+    "node-selecionar-motivos": {
+      "SelectFromCollection": {
+        "Name": "selecionar_motivos",
+        "Inputs": [
+          "node-esquema-motivos"
+        ],
+        "Index": 0
+      }
+    },
+    "node-sql-motivos": {
+      "SparkSQL": {
+        "Name": "bronze_motivos",
+        "Inputs": [
+          "node-selecionar-motivos"
+        ],
+        "SqlQuery": "@arquivo:jobs/sql/bronze/motivos.sql",
+        "SqlAliases": [
+          {
+            "From": "node-selecionar-motivos",
+            "Alias": "raw_motivos"
+          }
+        ]
+      }
+    },
+    "node-gravar-motivos": {
+      "CustomCode": {
+        "Name": "gravar_motivos",
+        "Inputs": [
+          "node-sql-motivos"
+        ],
+        "Code": "@arquivo:jobs/custom/gravar_delta.py",
+        "ClassName": "GravarDeltaMotivos"
+      }
+    },
+    "node-raw-municipios": {
+      "CatalogSource": {
+        "Name": "raw_municipios",
+        "Database": "goodlion_raw",
+        "Table": "municipios",
+        "PartitionPredicate": ""
+      }
+    },
+    "node-esquema-municipios": {
+      "CustomCode": {
+        "Name": "garantir_esquema_municipios",
+        "Inputs": [
+          "node-raw-municipios"
+        ],
+        "Code": "@arquivo:jobs/custom/garantir_esquema.py",
+        "ClassName": "GarantirEsquemaMunicipios"
+      }
+    },
+    "node-selecionar-municipios": {
+      "SelectFromCollection": {
+        "Name": "selecionar_municipios",
+        "Inputs": [
+          "node-esquema-municipios"
+        ],
+        "Index": 0
+      }
+    },
+    "node-sql-municipios": {
+      "SparkSQL": {
+        "Name": "bronze_municipios",
+        "Inputs": [
+          "node-selecionar-municipios"
+        ],
+        "SqlQuery": "@arquivo:jobs/sql/bronze/municipios.sql",
+        "SqlAliases": [
+          {
+            "From": "node-selecionar-municipios",
+            "Alias": "raw_municipios"
+          }
+        ]
+      }
+    },
+    "node-gravar-municipios": {
+      "CustomCode": {
+        "Name": "gravar_municipios",
+        "Inputs": [
+          "node-sql-municipios"
+        ],
+        "Code": "@arquivo:jobs/custom/gravar_delta.py",
+        "ClassName": "GravarDeltaMunicipios"
+      }
+    },
+    "node-raw-naturezas": {
+      "CatalogSource": {
+        "Name": "raw_naturezas",
+        "Database": "goodlion_raw",
+        "Table": "naturezas",
+        "PartitionPredicate": ""
+      }
+    },
+    "node-esquema-naturezas": {
+      "CustomCode": {
+        "Name": "garantir_esquema_naturezas",
+        "Inputs": [
+          "node-raw-naturezas"
+        ],
+        "Code": "@arquivo:jobs/custom/garantir_esquema.py",
+        "ClassName": "GarantirEsquemaNaturezas"
+      }
+    },
+    "node-selecionar-naturezas": {
+      "SelectFromCollection": {
+        "Name": "selecionar_naturezas",
+        "Inputs": [
+          "node-esquema-naturezas"
+        ],
+        "Index": 0
+      }
+    },
+    "node-sql-naturezas": {
+      "SparkSQL": {
+        "Name": "bronze_naturezas",
+        "Inputs": [
+          "node-selecionar-naturezas"
+        ],
+        "SqlQuery": "@arquivo:jobs/sql/bronze/naturezas.sql",
+        "SqlAliases": [
+          {
+            "From": "node-selecionar-naturezas",
+            "Alias": "raw_naturezas"
+          }
+        ]
+      }
+    },
+    "node-gravar-naturezas": {
+      "CustomCode": {
+        "Name": "gravar_naturezas",
+        "Inputs": [
+          "node-sql-naturezas"
+        ],
+        "Code": "@arquivo:jobs/custom/gravar_delta.py",
+        "ClassName": "GravarDeltaNaturezas"
+      }
+    },
+    "node-raw-paises": {
+      "CatalogSource": {
+        "Name": "raw_paises",
+        "Database": "goodlion_raw",
+        "Table": "paises",
+        "PartitionPredicate": ""
+      }
+    },
+    "node-esquema-paises": {
+      "CustomCode": {
+        "Name": "garantir_esquema_paises",
+        "Inputs": [
+          "node-raw-paises"
+        ],
+        "Code": "@arquivo:jobs/custom/garantir_esquema.py",
+        "ClassName": "GarantirEsquemaPaises"
+      }
+    },
+    "node-selecionar-paises": {
+      "SelectFromCollection": {
+        "Name": "selecionar_paises",
+        "Inputs": [
+          "node-esquema-paises"
+        ],
+        "Index": 0
+      }
+    },
+    "node-sql-paises": {
+      "SparkSQL": {
+        "Name": "bronze_paises",
+        "Inputs": [
+          "node-selecionar-paises"
+        ],
+        "SqlQuery": "@arquivo:jobs/sql/bronze/paises.sql",
+        "SqlAliases": [
+          {
+            "From": "node-selecionar-paises",
+            "Alias": "raw_paises"
+          }
+        ]
+      }
+    },
+    "node-gravar-paises": {
+      "CustomCode": {
+        "Name": "gravar_paises",
+        "Inputs": [
+          "node-sql-paises"
+        ],
+        "Code": "@arquivo:jobs/custom/gravar_delta.py",
+        "ClassName": "GravarDeltaPaises"
+      }
+    },
+    "node-raw-qualificacoes": {
+      "CatalogSource": {
+        "Name": "raw_qualificacoes",
+        "Database": "goodlion_raw",
+        "Table": "qualificacoes",
+        "PartitionPredicate": ""
+      }
+    },
+    "node-esquema-qualificacoes": {
+      "CustomCode": {
+        "Name": "garantir_esquema_qualificacoes",
+        "Inputs": [
+          "node-raw-qualificacoes"
+        ],
+        "Code": "@arquivo:jobs/custom/garantir_esquema.py",
+        "ClassName": "GarantirEsquemaQualificacoes"
+      }
+    },
+    "node-selecionar-qualificacoes": {
+      "SelectFromCollection": {
+        "Name": "selecionar_qualificacoes",
+        "Inputs": [
+          "node-esquema-qualificacoes"
+        ],
+        "Index": 0
+      }
+    },
+    "node-sql-qualificacoes": {
+      "SparkSQL": {
+        "Name": "bronze_qualificacoes",
+        "Inputs": [
+          "node-selecionar-qualificacoes"
+        ],
+        "SqlQuery": "@arquivo:jobs/sql/bronze/qualificacoes.sql",
+        "SqlAliases": [
+          {
+            "From": "node-selecionar-qualificacoes",
+            "Alias": "raw_qualificacoes"
+          }
+        ]
+      }
+    },
+    "node-gravar-qualificacoes": {
+      "CustomCode": {
+        "Name": "gravar_qualificacoes",
+        "Inputs": [
+          "node-sql-qualificacoes"
+        ],
+        "Code": "@arquivo:jobs/custom/gravar_delta.py",
+        "ClassName": "GravarDeltaQualificacoes"
+      }
+    }
+  }
+}

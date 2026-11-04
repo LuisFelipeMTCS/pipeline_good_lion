@@ -21,3 +21,15 @@ def test_exportar_grava_no_arquivo_o_sql_editado_e_devolve_o_marcador(tmp_path, 
 
     assert exportar_job.devolver_marcadores(vindo_do_glue, atual) == atual
     assert (tmp_path / "jobs/x.sql").read_text() == "SELECT 2"
+
+
+def test_todos_os_jobs_montam_e_o_no_antes_do_gravar_delta_da_o_nome_da_tabela():
+    for arquivo in sorted((deploy_jobs.RAIZ / "glue/jobs").glob("*.json")):
+        # montar() falha se um marcador aponta para arquivo inexistente.
+        job = deploy_jobs.montar(json.loads(arquivo.read_text()))
+        nos = job["CodeGenConfigurationNodes"]
+        camada = job["Name"].split("_", 1)[0]
+        for no in nos.values():
+            if no.get("CustomCode", {}).get("ClassName", "").startswith("GravarDelta"):
+                anterior = next(iter(nos[no["CustomCode"]["Inputs"][0]].values()))["Name"]
+                assert anterior.startswith(f"{camada}_"), (arquivo.name, anterior)
