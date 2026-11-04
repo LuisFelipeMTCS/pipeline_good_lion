@@ -20,7 +20,8 @@
     "--job-language": "python",
     "--datalake-formats": "delta",
     "--TempDir": "s3://goodlion-artifacts-724793286570/temporary/",
-    "--bucket": "goodlion-bronze-724793286570"
+    "--bucket": "goodlion-bronze-724793286570",
+    "--enable-continuous-cloudwatch-log": "true"
   },
   "CodeGenConfigurationNodes": {
     "node-raw": {

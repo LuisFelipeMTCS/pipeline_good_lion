@@ -38,9 +38,10 @@ def gravar(spark, monkeypatch):
     s3.Bucket("bronze").objects.filter(Prefix=f"sample/{tabela}/").delete()
 
 
-def test_substitui_so_os_meses_do_lote_e_ignora_lote_vazio(gravar):
+def test_substitui_so_os_meses_do_lote_e_ignora_lote_vazio(gravar, capsys):
     gravar([("00000001", "2026-09")])
     gravar([("00000002", "2026-10"), ("00000003", "2026-10")])
+    assert "linhas=2 meses=2026-10" in capsys.readouterr().out
     esperado = [("00000002", "2026-10"), ("00000003", "2026-10"), ("00000004", "2026-09")]
     assert gravar([("00000004", "2026-09")]) == esperado
     assert gravar([]) == esperado

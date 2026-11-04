@@ -134,11 +134,14 @@ def ingerir_mes(ano_mes, s3, bucket, prefixo="", base_url=BASE_URL, tabelas=None
             chave = f"{prefixo}{tabela}/ano_mes={ano_mes}/{nome[:-len('.zip')]}.csv"
             with abrir_convertido(zip_local.name, tabela) as csv_utf8:
                 s3.upload_fileobj(csv_utf8, bucket, chave)
+        print("gravado:", chave, flush=True)
+    return len(arquivos)
 
 
 def main(argv=None):
     import argparse
     import os
+    import time
 
     import boto3
 
@@ -152,7 +155,10 @@ def main(argv=None):
     # S3_ENDPOINT aponta para o MinIO local; na AWS fica vazio e o boto3 usa o S3.
     s3 = boto3.client("s3", endpoint_url=os.environ.get("S3_ENDPOINT") or None)
     tabelas = [t for t in args.tabelas.split(",") if t]
-    ingerir_mes(args.ano_mes, s3, args.bucket, args.prefixo, tabelas=tabelas)
+    inicio = time.time()
+    arquivos = ingerir_mes(args.ano_mes, s3, args.bucket, args.prefixo, tabelas=tabelas)
+    # Linha lida pelo dashboard do CloudWatch (duração por execução).
+    print(f"resumo job=ingest_receita segundos={int(time.time() - inicio)} arquivos={arquivos} meses={args.ano_mes}")
 
 
 if __name__ == "__main__":
