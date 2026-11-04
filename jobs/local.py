@@ -204,6 +204,11 @@ def gold_fato_movimentacao_empresa(spark, origem, destino, ano_mes, tabela="empr
     _gravar_delta(saida, f"{destino}/fato_movimentacao_empresa", ano_mes)
 
 
+def manutencao(spark, origem, destino, ano_mes, buckets="bronze,silver,gold"):
+    vazio = spark.createDataFrame([], "x string")  # no Glue, a origem do nó; aqui não é usada
+    _custom(spark, "manutencao", "Manutencao", {"origem": vazio}, buckets=buckets, ambiente="sample")
+
+
 # Na ordem em que rodam. O bucket de origem é o da camada anterior (o silver_ibge_municipios lê o raw:
 # na AWS ele é a receita do DataBrew).
 JOBS = {
@@ -220,6 +225,7 @@ JOBS = {
     "gold_dimensoes": gold_dimensoes,
     "gold_fato_empresa_mensal": gold_fato_empresa_mensal,
     "gold_fato_movimentacao_empresa": gold_fato_movimentacao_empresa,
+    "manutencao": manutencao,
 }
 CAMADA_ANTERIOR = {"bronze": "raw", "silver": "bronze", "gold": "silver"}
 
@@ -240,6 +246,9 @@ def main(argv=None):
     prefixo = "/sample" if args.ambiente == "sample" else ""
     spark = criar_spark()
     for nome in args.jobs.split(","):
+        if nome == "manutencao":
+            manutencao(spark, None, None, args.ano_mes)
+            continue
         camada = nome.split("_", 1)[0]
         origem = "raw" if nome == "silver_ibge_municipios" else CAMADA_ANTERIOR[camada]
         JOBS[nome](spark, f"s3a://{origem}{prefixo}", f"s3a://{camada}{prefixo}", args.ano_mes)

@@ -19,7 +19,7 @@ test:
 	uv run --env-file .env pytest -q
 
 test-spark:  ## testes que precisam de Spark, dentro do container do Glue
-	docker compose exec -T -e PYTHONDONTWRITEBYTECODE=1 glue python3 -m pytest -q -p no:cacheprovider tests/test_pipeline_estabelecimentos.py tests/test_gravar_delta.py tests/test_dim_municipio.py tests/test_fato_empresa_mensal.py tests/test_filtrar_mes.py tests/test_movimentacao.py
+	docker compose exec -T -e PYTHONDONTWRITEBYTECODE=1 glue python3 -m pytest -q -p no:cacheprovider tests/test_pipeline_estabelecimentos.py tests/test_gravar_delta.py tests/test_dim_municipio.py tests/test_fato_empresa_mensal.py tests/test_filtrar_mes.py tests/test_movimentacao.py tests/test_manutencao.py
 
 lint:
 	uv run ruff check .

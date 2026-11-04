@@ -1,0 +1,49 @@
+{
+  "Name": "manutencao",
+  "Description": "OPTIMIZE + VACUUM (7 dias) em todas as tabelas Delta da Bronze, Silver e Gold",
+  "Role": "arn:aws:iam::724793286570:role/glue-pipeline",
+  "GlueVersion": "5.0",
+  "WorkerType": "G.1X",
+  "NumberOfWorkers": 2,
+  "ExecutionClass": "FLEX",
+  "MaxRetries": 1,
+  "Timeout": 60,
+  "Command": {
+    "Name": "glueetl",
+    "ScriptLocation": "s3://goodlion-artifacts-724793286570/scripts/manutencao.py",
+    "PythonVersion": "3"
+  },
+  "DefaultArguments": {
+    "--conf": "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension --conf spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog",
+    "--ambiente": "sample",
+    "--job-bookmark-option": "job-bookmark-disable",
+    "--job-language": "python",
+    "--datalake-formats": "delta",
+    "--TempDir": "s3://goodlion-artifacts-724793286570/temporary/",
+    "--enable-continuous-cloudwatch-log": "true",
+    "--buckets": "goodlion-bronze-724793286570,goodlion-silver-724793286570,goodlion-gold-724793286570"
+  },
+  "CodeGenConfigurationNodes": {
+    "node-origem": {
+      "S3CsvSource": {
+        "Name": "origem",
+        "Paths": [
+          "s3://goodlion-artifacts-724793286570/referencias/municipios_correcoes.csv"
+        ],
+        "Separator": "comma",
+        "QuoteChar": "quote",
+        "WithHeader": true
+      }
+    },
+    "node-manutencao": {
+      "CustomCode": {
+        "Name": "manutencao",
+        "Inputs": [
+          "node-origem"
+        ],
+        "Code": "@arquivo:jobs/custom/manutencao.py",
+        "ClassName": "Manutencao"
+      }
+    }
+  }
+}
