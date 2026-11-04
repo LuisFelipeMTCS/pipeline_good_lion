@@ -13,7 +13,10 @@ DIMENSOES = {
     "dim_municipio": ("id_municipio_rf", "id_municipio_ibge", "nome", "sigla_uf", "regiao"),
     "dim_categoria": ("id_categoria", "nome", "ordem"),
 }
-VISOES = ("mv_categorias_municipio", "mv_categorias_uf", "mv_categorias_regiao")
+VISOES = (
+    "mv_categorias_municipio", "mv_categorias_uf", "mv_categorias_regiao",
+    "mv_capital_municipio", "mv_capital_uf", "mv_capital_regiao",
+)
 
 
 def _copiar(conexao, tabela, colunas, linhas):

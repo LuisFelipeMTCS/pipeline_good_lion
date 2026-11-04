@@ -61,3 +61,35 @@ FROM fato_empresa_mensal AS f
 JOIN dim_municipio AS m USING (id_municipio_rf)
 JOIN dim_categoria AS c USING (id_categoria)
 GROUP BY f.ano_mes, m.regiao, c.nome, c.ordem;
+
+-- Pergunta 2: capital social declarado na abertura (não é faturamento nem lucro). A mediana é a medida
+-- principal: há muitos MEIs com R$ 1 e erros na casa dos bilhões, que distorcem a média e a soma.
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_capital_municipio AS
+SELECT
+    f.ano_mes, m.regiao, m.sigla_uf, m.nome AS municipio,
+    COUNT(*) AS qtd_empresas,
+    percentile_cont(0.5) WITHIN GROUP (ORDER BY f.capital_social)::numeric(18, 2) AS mediana_capital_social,
+    SUM(f.capital_social) AS soma_capital_social
+FROM fato_empresa_mensal AS f
+JOIN dim_municipio AS m USING (id_municipio_rf)
+GROUP BY f.ano_mes, f.id_municipio_rf, m.regiao, m.sigla_uf, m.nome;
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_capital_uf AS
+SELECT
+    f.ano_mes, m.regiao, m.sigla_uf,
+    COUNT(*) AS qtd_empresas,
+    percentile_cont(0.5) WITHIN GROUP (ORDER BY f.capital_social)::numeric(18, 2) AS mediana_capital_social,
+    SUM(f.capital_social) AS soma_capital_social
+FROM fato_empresa_mensal AS f
+JOIN dim_municipio AS m USING (id_municipio_rf)
+GROUP BY f.ano_mes, m.regiao, m.sigla_uf;
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_capital_regiao AS
+SELECT
+    f.ano_mes, m.regiao,
+    COUNT(*) AS qtd_empresas,
+    percentile_cont(0.5) WITHIN GROUP (ORDER BY f.capital_social)::numeric(18, 2) AS mediana_capital_social,
+    SUM(f.capital_social) AS soma_capital_social
+FROM fato_empresa_mensal AS f
+JOIN dim_municipio AS m USING (id_municipio_rf)
+GROUP BY f.ano_mes, m.regiao;
