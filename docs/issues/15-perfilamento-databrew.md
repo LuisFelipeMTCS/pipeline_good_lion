@@ -4,9 +4,17 @@
 
 **Bloqueado por:** 08
 
-**Status:** ready-for-agent
+**Status:** in-progress (dataset, job e agenda no Terraform; falta aplicar e rodar)
 
-- [ ] Dataset e job de perfilamento do DataBrew criados pelo Terraform (`infra/databrew.tf`)
-- [ ] Agenda própria configurada
+- [x] Dataset e job de perfilamento do DataBrew criados pelo Terraform (`infra/databrew.tf`)
+- [x] Agenda própria configurada
 - [ ] Perfil gerado sobre a amostra, com resultado gravado no `artifacts`
 - [ ] Custo da execução anotado
+
+## Andamento (03/11/2026)
+
+- Na pilha do CloudFormation de `infra/databrew.tf`: dataset `goodlion-silver-estabelecimentos` (Parquet da pasta `silver/sample/estabelecimentos/`), job `goodlion-perfil-silver-estabelecimentos` (1 nó, amostra de 20.000 linhas, resultado em `artifacts/databrew/perfil/`) e agenda `goodlion-perfil-mensal` (dia 25, às 12h UTC, depois do gatilho mensal do dia 20).
+- **Por que o Parquet da pasta:** o DataBrew não lê tabela Delta do Catalog (resposta da AWS no re:Post). A pasta também guarda, até o `VACUUM` (7 dias), arquivos que já saíram do Delta. O perfil vale para distribuições, nulos e valores distintos; a contagem de linhas vem do Athena.
+
+**Falta:** `terraform apply`, rodar o job uma vez (`aws databrew start-job-run --name goodlion-perfil-silver-estabelecimentos`), guardar o print do perfil e anotar o custo (US$ 0,48 por nó-hora, cobrado por minuto).
+

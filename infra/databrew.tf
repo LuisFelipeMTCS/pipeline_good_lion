@@ -17,14 +17,25 @@ resource "aws_iam_role_policy_attachment" "databrew_servico" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSGlueDataBrewServiceRole"
 }
 
-# Lê o JSON do IBGE no raw e grava o resultado limpo na silver.
+# Lê o JSON do IBGE no raw, grava o resultado limpo na silver, lê a silver_estabelecimentos para o perfil e
+# grava o perfil no artifacts.
 resource "aws_iam_role_policy" "databrew_buckets" {
   role = aws_iam_role.databrew.id
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
-      { Effect = "Allow", Action = "s3:ListBucket", Resource = [aws_s3_bucket.camada["raw"].arn, aws_s3_bucket.camada["silver"].arn] },
+      {
+        Effect   = "Allow"
+        Action   = "s3:ListBucket"
+        Resource = [for c in ["raw", "silver", "artifacts"] : aws_s3_bucket.camada[c].arn]
+      },
       { Effect = "Allow", Action = "s3:GetObject", Resource = "${aws_s3_bucket.camada["raw"].arn}/ibge_municipios/*" },
+      { Effect = "Allow", Action = "s3:GetObject", Resource = "${aws_s3_bucket.camada["silver"].arn}/sample/estabelecimentos/*" },
+      {
+        Effect   = "Allow"
+        Action   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
+        Resource = "${aws_s3_bucket.camada["artifacts"].arn}/databrew/*"
+      },
       {
         Effect   = "Allow"
         Action   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
@@ -83,6 +94,45 @@ resource "aws_cloudformation_stack" "databrew" {
             Overwrite      = true
             MaxOutputFiles = 1
           }]
+        }
+      }
+      # Perfilamento da silver_estabelecimentos (ticket 15). O DataBrew não lê tabela Delta, então o dataset é
+      # o Parquet da pasta. Até o VACUUM (7 dias) ela também tem arquivos já fora do Delta: o perfil serve para
+      # distribuições e nulos, não para contar linhas (isso é do Athena).
+      DatasetSilverEstabelecimentos = {
+        Type = "AWS::DataBrew::Dataset"
+        Properties = {
+          Name   = "${var.prefixo}-silver-estabelecimentos"
+          Format = "PARQUET"
+          Input = { S3InputDefinition = {
+            Bucket = aws_s3_bucket.camada["silver"].bucket
+            Key    = "sample/estabelecimentos/"
+          } }
+        }
+      }
+      JobPerfil = {
+        Type      = "AWS::DataBrew::Job"
+        DependsOn = ["DatasetSilverEstabelecimentos"]
+        Properties = {
+          Name           = "${var.prefixo}-perfil-silver-estabelecimentos"
+          Type           = "PROFILE"
+          RoleArn        = aws_iam_role.databrew.arn
+          DatasetName    = "${var.prefixo}-silver-estabelecimentos"
+          MaxCapacity    = 1
+          MaxRetries     = 0
+          Timeout        = 30 # minutos
+          JobSample      = { Mode = "CUSTOM_ROWS", Size = 20000 }
+          OutputLocation = { Bucket = aws_s3_bucket.camada["artifacts"].bucket, Key = "databrew/perfil/" }
+        }
+      }
+      # Agenda própria, fora do Workflow (o perfil é informativo): dia 25, depois do gatilho mensal do dia 20.
+      AgendaPerfil = {
+        Type      = "AWS::DataBrew::Schedule"
+        DependsOn = ["JobPerfil"]
+        Properties = {
+          Name           = "${var.prefixo}-perfil-mensal"
+          CronExpression = "cron(0 12 25 * ? *)"
+          JobNames       = ["${var.prefixo}-perfil-silver-estabelecimentos"]
         }
       }
     }
