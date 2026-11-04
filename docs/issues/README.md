@@ -11,12 +11,12 @@ Tickets em fatias verticais (tracer bullets) gerados a partir do [PRD](../PRD.md
 ### Bloqueado
 | # | Ticket | Bloqueado por |
 |---|---|---|
-| 14 | [Catálogo da Silver/Gold e evolução de esquema](14-catalogo-e-evolucao-de-esquema.md) | 08 |
 | 15 | [Perfilamento DataBrew da silver_estabelecimentos](15-perfilamento-databrew.md) | 08 |
 | 16 | [Workflow ponta a ponta](16-workflow-ponta-a-ponta.md) | 05, 06, 09, 10, 11, 12, 13, 14 |
 | 17 | [Rodada final na base completa](17-rodada-final-base-completa.md) | 15, 16 |
 
 ### Em andamento
+- [14 — Catálogo da Silver/Gold e evolução de esquema](14-catalogo-e-evolucao-de-esquema.md) (crawlers no Terraform; falta rodar na AWS)
 - [13 — Arquivos pequenos: OPTIMIZE/VACUUM com evidência](13-arquivos-pequenos-optimize-vacuum.md) (medição local pronta; falta o Athena)
 - [12 — Pergunta 3: aberturas e fechamentos via CDC](12-pergunta-3-cdc-movimentacao.md) (conferido localmente; falta AWS e o gráfico no Metabase)
 - [11 — Data Quality na Silver](11-data-quality-silver.md) (regras e nós prontos; falta a prova na AWS)

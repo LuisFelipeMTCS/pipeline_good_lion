@@ -67,3 +67,36 @@ resource "aws_glue_crawler" "raw" {
     Grouping = { TableGroupingPolicy = "CombineCompatibleSchemas" } # padrão da AWS; declarado para não aparecer como diferença
   })
 }
+
+# Silver e Gold: o destino Delta do Studio não atualiza o Catalog, então os crawlers registram as tabelas
+# (Delta nativas, que o Athena lê direto). O PRD previa um crawler só, mas um crawler grava num banco só
+# (o alvo Delta não tem banco próprio): um por camada, para cada tabela ficar no banco da sua camada.
+locals {
+  tabelas_delta = {
+    silver = ["estabelecimentos", "empresas", "simples", "empresa_consolidada"]
+    gold = [
+      "dim_municipio", "dim_categoria", "dim_cnae", "dim_natureza_juridica", "dim_tempo",
+      "fato_empresa_mensal", "fato_movimentacao_empresa",
+    ]
+  }
+}
+
+resource "aws_glue_crawler" "delta" {
+  for_each      = local.tabelas_delta
+  name          = "${var.prefixo}-${each.key}"
+  role          = aws_iam_role.glue_pipeline.arn
+  database_name = aws_glue_catalog_database.camada[each.key].name
+
+  # shortcut: só a amostra; na rodada final (ticket 17) os caminhos passam para a raiz do bucket.
+  delta_target {
+    delta_tables              = [for t in each.value : "s3://${aws_s3_bucket.camada[each.key].bucket}/sample/${t}/"]
+    write_manifest            = false
+    create_native_delta_table = true
+  }
+
+  # Coluna nova vira nova versão da tabela no Catalog (evolução de esquema); remoções só vão para o log.
+  schema_change_policy {
+    update_behavior = "UPDATE_IN_DATABASE"
+    delete_behavior = "LOG"
+  }
+}
