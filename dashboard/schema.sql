@@ -93,3 +93,33 @@ SELECT
 FROM fato_empresa_mensal AS f
 JOIN dim_municipio AS m USING (id_municipio_rf)
 GROUP BY f.ano_mes, m.regiao;
+
+-- Pergunta 3: aberturas, baixas e mudanças vindas do Change Data Feed (ticket 12).
+CREATE TABLE IF NOT EXISTS fato_movimentacao_empresa (
+    ano_mes         text NOT NULL,
+    cnpj_basico     text NOT NULL,
+    tipo_evento     text NOT NULL,
+    id_municipio_rf text,
+    id_categoria    text
+);
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_movimentacao_municipio AS
+SELECT f.ano_mes, m.regiao, m.sigla_uf, m.nome AS municipio, f.tipo_evento, c.nome AS categoria, COUNT(*) AS qtd_eventos
+FROM fato_movimentacao_empresa AS f
+JOIN dim_municipio AS m USING (id_municipio_rf)
+JOIN dim_categoria AS c USING (id_categoria)
+GROUP BY f.ano_mes, f.id_municipio_rf, m.regiao, m.sigla_uf, m.nome, f.tipo_evento, c.nome;
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_movimentacao_uf AS
+SELECT f.ano_mes, m.regiao, m.sigla_uf, f.tipo_evento, c.nome AS categoria, COUNT(*) AS qtd_eventos
+FROM fato_movimentacao_empresa AS f
+JOIN dim_municipio AS m USING (id_municipio_rf)
+JOIN dim_categoria AS c USING (id_categoria)
+GROUP BY f.ano_mes, m.regiao, m.sigla_uf, f.tipo_evento, c.nome;
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_movimentacao_regiao AS
+SELECT f.ano_mes, m.regiao, f.tipo_evento, c.nome AS categoria, COUNT(*) AS qtd_eventos
+FROM fato_movimentacao_empresa AS f
+JOIN dim_municipio AS m USING (id_municipio_rf)
+JOIN dim_categoria AS c USING (id_categoria)
+GROUP BY f.ano_mes, m.regiao, f.tipo_evento, c.nome;

@@ -6,12 +6,48 @@ Pastas, nomes e padrões: [ARQUITETURA](../ARQUITETURA.md).
 
 **Bloqueado por:** 08
 
-**Status:** ready-for-agent
+**Status:** in-progress (conferido localmente; falta rodar na AWS e o gráfico no Metabase)
 
-- [ ] `silver_empresa_consolidada` com Change Data Feed ligado
-- [ ] `MERGE` mensal no Custom Transform `jobs/custom/merge_consolidada.py`: insere novos, atualiza alterados e remove os que deixaram de existir (`whenNotMatchedBySource`)
-- [ ] `fato_movimentacao_empresa` (`jobs/sql/gold/fato_movimentacao_empresa.sql`) com os 5 tipos de evento: abertura, baixa, mudança de porte, entrada no MEI e saída do MEI
-- [ ] Testes locais com pytest (via `jobs/local.py`) para a classificação de cada tipo de evento
-- [ ] Rodar o `MERGE` do mesmo mês duas vezes não gera eventos duplicados
-- [ ] Na amostra, 2026-09 seguido de 2026-10 produz eventos plausíveis (conferir alguns CNPJs à mão)
+- [x] `silver_empresa_consolidada` com Change Data Feed ligado
+- [x] `MERGE` mensal no Custom Transform `jobs/custom/merge_consolidada.py`: insere novos, atualiza alterados e remove os que deixaram de existir (`whenNotMatchedBySource`)
+- [x] `fato_movimentacao_empresa` (`jobs/sql/gold/fato_movimentacao_empresa.sql`) com os 5 tipos de evento: abertura, baixa, mudança de porte, entrada no MEI e saída do MEI
+- [x] Testes locais com pytest (via `jobs/local.py`) para a classificação de cada tipo de evento
+- [x] Rodar o `MERGE` do mesmo mês duas vezes não gera eventos duplicados
+- [x] Na amostra, 2026-09 seguido de 2026-10 produz eventos plausíveis (conferir alguns CNPJs à mão)
 - [ ] Visões (`dashboard/schema.sql`) e gráfico no Metabase com aberturas e fechamentos por município, UF e região
+
+## Andamento (03/11/2026)
+
+**Como funciona:**
+- `jobs/sql/silver/empresa_consolidada.sql` monta o estado do mês, uma linha por `cnpj_basico`: situação e município da matriz, porte, MEI e categoria.
+- `jobs/custom/merge_consolidada.py` aplica o `MERGE`, atualizando só as linhas em que alguma coluna mudou (sem isso, todo mês a base inteira viraria mudança no CDF). Cada commit leva o `ano_mes` no `userMetadata`. A primeira carga é uma gravação simples, sem eventos, e liga o Change Data Feed.
+- `jobs/custom/ler_mudancas.py` lê o CDF das versões de `MERGE` do mês. Rodar o mês de novo cria uma versão sem mudanças, então nada se repete.
+- `jobs/sql/gold/fato_movimentacao_empresa.sql` classifica os eventos: abertura (empresa nova e ativa), baixa (situação passou a 08), mudança de porte, entrada e saída do MEI. Uma empresa pode ter mais de um evento no mês (uma linha por tipo). Empresa removida pelo `MERGE` não é evento.
+- Jobs visuais: `glue/jobs/silver_empresa_consolidada.json` e `glue/jobs/gold_fato_movimentacao_empresa.json`.
+- Dashboard: `mv_movimentacao_municipio`, `mv_movimentacao_uf` e `mv_movimentacao_regiao` (eventos por tipo e categoria).
+- Testes: `tests/test_movimentacao.py` (os 5 tipos, carga inicial sem eventos, empresa que some do arquivo, reprocessamento sem duplicar) e `tests/test_carga_dashboard.py`.
+
+**Amostra local, 2026-10:**
+
+| UF | Aberturas (MEI) | Baixas | Mudança de porte | Entrada no MEI | Saída do MEI |
+|---|---:|---:|---:|---:|---:|
+| AC | 728 (569) | 355 | 19 | 1 | 333 |
+| AP | 797 (577) | 379 | 23 | 0 | 297 |
+| RR | 783 (609) | 282 | 25 | 0 | 265 |
+
+O MERGE de 2026-10 mexeu em 6.605 linhas da consolidada (2.390 inseridas, 4.142 atualizadas, 73 removidas).
+
+**Conferência à mão no raw (setembro → outubro):**
+
+| Evento | CNPJ básico | Setembro | Outubro |
+|---|---|---|---|
+| abertura | 01230302 | não existe | situação 02, porte 01 |
+| baixa | 00858442 | situação 04 | situação 08 |
+| entrada no MEI | 19362267 | MEI N (excluído em 2018) | MEI S, sem exclusão |
+| mudança de porte | 03010697 | porte 03 | porte 05 |
+| saída do MEI | 13358871 | MEI S | MEI N (excluído em 01/10/2026) e situação 08 (também conta como baixa) |
+
+**Achado:** as ativas de RR caem 1.324 de setembro para outubro, mas aberturas menos baixas dá +501. A diferença é de inaptidão: 2.012 empresas foram de 02 para 04 (inapta) e 824 voltaram de 04 para 02. O PRD só define "baixa" (08), então inaptidão não vira evento. Se o dashboard precisar explicar a queda, dá para acrescentar o evento "inaptidão".
+
+**Falta:** rodar na AWS (2026-09 e depois 2026-10, nessa ordem) e montar o gráfico de aberturas e fechamentos no Metabase.
+

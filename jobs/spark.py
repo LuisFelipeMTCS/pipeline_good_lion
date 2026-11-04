@@ -25,5 +25,7 @@ def criar_spark(master=None):
             )
             .config("spark.hadoop.fs.s3a.access.key", os.environ["AWS_ACCESS_KEY_ID"])
             .config("spark.hadoop.fs.s3a.secret.key", os.environ["AWS_SECRET_ACCESS_KEY"])
+            # Os Custom Transforms montam caminhos s3:// (como no Glue); aqui eles também vão para o MinIO.
+            .config("spark.hadoop.fs.s3.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
         )
     return construtor.getOrCreate()

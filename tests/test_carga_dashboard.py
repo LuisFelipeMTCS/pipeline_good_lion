@@ -116,3 +116,22 @@ def test_capital_social_com_mediana_e_soma_por_uf_e_regiao(postgres, tmp_path):
     ]
     assert regiao == [("Norte", decimal.Decimal("12500.00"))]
 
+
+
+def test_movimentacao_do_mes_por_tipo_de_evento(postgres, tmp_path):
+    _gravar_gold(tmp_path, FATO)
+    eventos = [("00000009", "abertura", "0139", "MEI"), ("00000008", "abertura", "0139", "MEI"),
+               ("00000007", "baixa", "0605", "ME")]
+    write_deltalake(str(tmp_path / "fato_movimentacao_empresa"), pa.table({
+        "cnpj_basico": [e[0] for e in eventos], "tipo_evento": [e[1] for e in eventos],
+        "id_municipio_rf": [e[2] for e in eventos], "id_categoria": [e[3] for e in eventos],
+        "ano_mes": ["2026-10"] * len(eventos),
+    }), partition_by=["ano_mes"], mode="overwrite")
+
+    carregar_mes(str(tmp_path), "2026-10", postgres)
+
+    with psycopg.connect(postgres) as conexao:
+        uf = conexao.execute(
+            "SELECT sigla_uf, tipo_evento, categoria, qtd_eventos FROM mv_movimentacao_uf ORDER BY 1, 2"
+        ).fetchall()
+    assert uf == [("AC", "abertura", "MEI", 2), ("AP", "baixa", "ME", 1)]

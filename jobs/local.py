@@ -60,6 +60,37 @@ def _ler_raw(spark, origem, tabela, ano_mes):
     )
 
 
+def _custom(spark, arquivo, classe, entradas, **args):
+    """Roda o corpo de um Custom Transform de jobs/custom/ como o Glue: embrulhado numa função, com os
+    parâmetros do job em sys.argv. Assim o MERGE e a leitura do CDF locais são o mesmo código da AWS."""
+    import sys
+    import textwrap
+
+    from awsglue.context import GlueContext
+    from awsglue.dynamicframe import DynamicFrame, DynamicFrameCollection
+
+    glue = GlueContext(spark.sparkContext)
+    escopo = {}
+    codigo = (Path(__file__).parent / "custom" / f"{arquivo}.py").read_text(encoding="utf-8")
+    exec(f"def {classe}(glueContext, dfc):\n" + textwrap.indent(codigo, "    "), escopo)
+    argv = sys.argv
+    parametros = [item for nome, valor in args.items() for item in (f"--{nome}", valor)]
+    sys.argv = ["local", "--JOB_NAME", "local", *parametros]
+    try:
+        colecao = DynamicFrameCollection({k: DynamicFrame.fromDF(df, glue, k) for k, df in entradas.items()}, glue)
+        saida = escopo[classe](glue, colecao)
+    finally:
+        sys.argv = argv
+    return saida.select(list(saida.keys())[0]).toDF()
+
+
+def _bucket(caminho):
+    # Os Custom Transforms recebem o bucket, como na AWS: s3a://silver/sample -> silver.
+    if not caminho.startswith("s3a://"):
+        raise ValueError(f"MERGE e CDF rodam contra o MinIO (s3a://): {caminho}")
+    return caminho.removeprefix("s3a://").split("/", 1)[0]
+
+
 def _gravar_dimensao(df, caminho):
     # Dimensão: regravada inteira.
     df.write.format("delta").mode("overwrite").option("overwriteSchema", "true").save(caminho)
@@ -92,6 +123,16 @@ def bronze_simples(spark, origem, destino, ano_mes):
 def bronze_dominios(spark, origem, destino, ano_mes, dominios=DOMINIOS):
     for dominio in dominios:
         _bronze(spark, origem, destino, ano_mes, dominio)
+
+
+def silver_empresa_consolidada(spark, origem, destino, ano_mes, tabela="empresa_consolidada"):
+    # Lê a Silver do mês (o destino) e aplica o MERGE na consolidada.
+    entradas = {
+        f"silver_{t}": _ler_delta(spark, f"{destino}/{t}", ano_mes) for t in ("estabelecimentos", "empresas", "simples")
+    }
+    estado = _sql(spark, "silver/empresa_consolidada", **entradas)
+    _custom(spark, "merge_consolidada", "MergeConsolidada", {f"silver_{tabela}_nodesql": estado},
+            ano_mes=ano_mes, bucket=_bucket(destino), ambiente="sample")
 
 
 def silver_ibge_municipios(spark, origem, destino, ano_mes):
@@ -155,6 +196,14 @@ def gold_fato_empresa_mensal(spark, origem, destino, ano_mes):
     _gravar_delta(saida, f"{destino}/fato_empresa_mensal", ano_mes)
 
 
+def gold_fato_movimentacao_empresa(spark, origem, destino, ano_mes, tabela="empresa_consolidada"):
+    vazio = spark.createDataFrame([], "x string")  # no Glue, a origem do nó; aqui só leva o nome da tabela
+    mudancas = _custom(spark, "ler_mudancas", "LerMudancas", {f"silver_{tabela}_nodeconsolidada": vazio},
+                       ano_mes=ano_mes, bucket_silver=_bucket(origem))
+    saida = _sql(spark, "gold/fato_movimentacao_empresa", mudancas=mudancas)
+    _gravar_delta(saida, f"{destino}/fato_movimentacao_empresa", ano_mes)
+
+
 # Na ordem em que rodam. O bucket de origem é o da camada anterior (o silver_ibge_municipios lê o raw:
 # na AWS ele é a receita do DataBrew).
 JOBS = {
@@ -165,10 +214,12 @@ JOBS = {
     "silver_estabelecimentos": silver_estabelecimentos,
     "silver_empresas": silver_empresas,
     "silver_simples": silver_simples,
+    "silver_empresa_consolidada": silver_empresa_consolidada,
     "silver_ibge_municipios": silver_ibge_municipios,
     "gold_dim_municipio": gold_dim_municipio,
     "gold_dimensoes": gold_dimensoes,
     "gold_fato_empresa_mensal": gold_fato_empresa_mensal,
+    "gold_fato_movimentacao_empresa": gold_fato_movimentacao_empresa,
 }
 CAMADA_ANTERIOR = {"bronze": "raw", "silver": "bronze", "gold": "silver"}
 
