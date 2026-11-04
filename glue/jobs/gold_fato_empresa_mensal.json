@@ -1,0 +1,144 @@
+{
+  "Name": "gold_fato_empresa_mensal",
+  "Description": "fato_empresa_mensal: 1 empresa ativa x ano_mes, limitado por --ano_mes",
+  "Role": "arn:aws:iam::724793286570:role/glue-pipeline",
+  "GlueVersion": "5.0",
+  "WorkerType": "G.1X",
+  "NumberOfWorkers": 2,
+  "ExecutionClass": "FLEX",
+  "MaxRetries": 1,
+  "Timeout": 30,
+  "Command": {
+    "Name": "glueetl",
+    "ScriptLocation": "s3://goodlion-artifacts-724793286570/scripts/gold_fato_empresa_mensal.py",
+    "PythonVersion": "3"
+  },
+  "DefaultArguments": {
+    "--conf": "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension --conf spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog",
+    "--ambiente": "sample",
+    "--job-bookmark-option": "job-bookmark-disable",
+    "--job-language": "python",
+    "--datalake-formats": "delta",
+    "--TempDir": "s3://goodlion-artifacts-724793286570/temporary/",
+    "--bucket": "goodlion-gold-724793286570",
+    "--enable-continuous-cloudwatch-log": "true"
+  },
+  "CodeGenConfigurationNodes": {
+    "node-estabelecimentos": {
+      "S3DeltaSource": {
+        "Name": "silver_estabelecimentos",
+        "Paths": [
+          "s3://goodlion-silver-724793286570/sample/estabelecimentos/"
+        ]
+      }
+    },
+    "node-filtrar-estabelecimentos": {
+      "CustomCode": {
+        "Name": "filtrar_estabelecimentos",
+        "Inputs": [
+          "node-estabelecimentos"
+        ],
+        "Code": "@arquivo:jobs/custom/filtrar_mes.py",
+        "ClassName": "FiltrarMesEstabelecimentos"
+      }
+    },
+    "node-mes-estabelecimentos": {
+      "SelectFromCollection": {
+        "Name": "mes_estabelecimentos",
+        "Inputs": [
+          "node-filtrar-estabelecimentos"
+        ],
+        "Index": 0
+      }
+    },
+    "node-empresas": {
+      "S3DeltaSource": {
+        "Name": "silver_empresas",
+        "Paths": [
+          "s3://goodlion-silver-724793286570/sample/empresas/"
+        ]
+      }
+    },
+    "node-filtrar-empresas": {
+      "CustomCode": {
+        "Name": "filtrar_empresas",
+        "Inputs": [
+          "node-empresas"
+        ],
+        "Code": "@arquivo:jobs/custom/filtrar_mes.py",
+        "ClassName": "FiltrarMesEmpresas"
+      }
+    },
+    "node-mes-empresas": {
+      "SelectFromCollection": {
+        "Name": "mes_empresas",
+        "Inputs": [
+          "node-filtrar-empresas"
+        ],
+        "Index": 0
+      }
+    },
+    "node-simples": {
+      "S3DeltaSource": {
+        "Name": "silver_simples",
+        "Paths": [
+          "s3://goodlion-silver-724793286570/sample/simples/"
+        ]
+      }
+    },
+    "node-filtrar-simples": {
+      "CustomCode": {
+        "Name": "filtrar_simples",
+        "Inputs": [
+          "node-simples"
+        ],
+        "Code": "@arquivo:jobs/custom/filtrar_mes.py",
+        "ClassName": "FiltrarMesSimples"
+      }
+    },
+    "node-mes-simples": {
+      "SelectFromCollection": {
+        "Name": "mes_simples",
+        "Inputs": [
+          "node-filtrar-simples"
+        ],
+        "Index": 0
+      }
+    },
+    "node-sql": {
+      "SparkSQL": {
+        "Name": "gold_fato_empresa_mensal",
+        "Inputs": [
+          "node-mes-estabelecimentos",
+          "node-mes-empresas",
+          "node-mes-simples"
+        ],
+        "SqlQuery": "@arquivo:jobs/sql/gold/fato_empresa_mensal.sql",
+        "SqlAliases": [
+          {
+            "From": "node-mes-estabelecimentos",
+            "Alias": "silver_estabelecimentos"
+          },
+          {
+            "From": "node-mes-empresas",
+            "Alias": "silver_empresas"
+          },
+          {
+            "From": "node-mes-simples",
+            "Alias": "silver_simples"
+          }
+        ]
+      }
+    },
+    "node-gravar": {
+      "CustomCode": {
+        "Name": "gravar_delta",
+        "Inputs": [
+          "node-sql"
+        ],
+        "Code": "@arquivo:jobs/custom/gravar_delta.py",
+        "ClassName": "GravarDelta"
+      }
+    }
+  }
+}

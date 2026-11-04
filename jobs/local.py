@@ -60,17 +60,38 @@ def _ler_raw(spark, origem, tabela, ano_mes):
     )
 
 
+def _gravar_dimensao(df, caminho):
+    # Dimensão: regravada inteira.
+    df.write.format("delta").mode("overwrite").option("overwriteSchema", "true").save(caminho)
+
+
+def _bronze(spark, origem, destino, ano_mes, tabela):
+    raw = _ler_raw(spark, origem, tabela, ano_mes)
+    saida = _sql(spark, f"bronze/{tabela}", **{f"raw_{tabela}": raw})
+    _gravar_delta(saida, f"{destino}/{tabela}", ano_mes)
+
+
+def _silver(spark, origem, destino, ano_mes, tabela):
+    entrada = _ler_delta(spark, f"{origem}/{tabela}", ano_mes)
+    saida = _sql(spark, f"silver/{tabela}", **{f"bronze_{tabela}": entrada})
+    _gravar_delta(saida, f"{destino}/{tabela}", ano_mes)
+
+
 def bronze_estabelecimentos(spark, origem, destino, ano_mes):
-    raw = _ler_raw(spark, origem, "estabelecimentos", ano_mes)
-    saida = _sql(spark, "bronze/estabelecimentos", raw_estabelecimentos=raw)
-    _gravar_delta(saida, f"{destino}/estabelecimentos", ano_mes)
+    _bronze(spark, origem, destino, ano_mes, "estabelecimentos")
+
+
+def bronze_empresas(spark, origem, destino, ano_mes):
+    _bronze(spark, origem, destino, ano_mes, "empresas")
+
+
+def bronze_simples(spark, origem, destino, ano_mes):
+    _bronze(spark, origem, destino, ano_mes, "simples")
 
 
 def bronze_dominios(spark, origem, destino, ano_mes, dominios=DOMINIOS):
     for dominio in dominios:
-        raw = _ler_raw(spark, origem, dominio, ano_mes)
-        saida = _sql(spark, f"bronze/{dominio}", **{f"raw_{dominio}": raw})
-        _gravar_delta(saida, f"{destino}/{dominio}", ano_mes)
+        _bronze(spark, origem, destino, ano_mes, dominio)
 
 
 def silver_ibge_municipios(spark, origem, destino, ano_mes):
@@ -90,9 +111,15 @@ def silver_ibge_municipios(spark, origem, destino, ano_mes):
 
 
 def silver_estabelecimentos(spark, origem, destino, ano_mes):
-    entrada = _ler_delta(spark, f"{origem}/estabelecimentos", ano_mes)
-    saida = _sql(spark, "silver/estabelecimentos", bronze_estabelecimentos=entrada)
-    _gravar_delta(saida, f"{destino}/estabelecimentos", ano_mes)
+    _silver(spark, origem, destino, ano_mes, "estabelecimentos")
+
+
+def silver_empresas(spark, origem, destino, ano_mes):
+    _silver(spark, origem, destino, ano_mes, "empresas")
+
+
+def silver_simples(spark, origem, destino, ano_mes):
+    _silver(spark, origem, destino, ano_mes, "simples")
 
 
 def gold_dim_municipio(spark, origem, destino, ano_mes):
@@ -106,25 +133,42 @@ def gold_dim_municipio(spark, origem, destino, ano_mes):
         silver_ibge_municipios=spark.read.parquet(f"{_sem_amostra(origem)}/ibge_municipios"),
         municipios_correcoes=correcoes,
     )
-    # Dimensão: regravada inteira.
-    saida.write.format("delta").mode("overwrite").option("overwriteSchema", "true").save(f"{destino}/dim_municipio")
+    _gravar_dimensao(saida, f"{destino}/dim_municipio")
 
 
-def gold_ativas_por_uf(spark, origem, destino, ano_mes):
-    entrada = _ler_delta(spark, f"{origem}/estabelecimentos", ano_mes)
-    saida = _sql(spark, "gold/ativas_por_uf", silver_estabelecimentos=entrada)
-    _gravar_delta(saida, f"{destino}/ativas_por_uf", ano_mes)
+def gold_dimensoes(spark, origem, destino, ano_mes):
+    bronze = _camada(origem, "bronze")
+    entradas = {
+        "bronze_cnaes": spark.read.format("delta").load(f"{bronze}/cnaes"),
+        "bronze_naturezas": spark.read.format("delta").load(f"{bronze}/naturezas"),
+        "silver_estabelecimentos": spark.read.format("delta").load(f"{origem}/estabelecimentos"),
+    }
+    for dimensao in ("dim_categoria", "dim_cnae", "dim_natureza_juridica", "dim_tempo"):
+        _gravar_dimensao(_sql(spark, f"gold/{dimensao}", **entradas), f"{destino}/{dimensao}")
+
+
+def gold_fato_empresa_mensal(spark, origem, destino, ano_mes):
+    entradas = {
+        f"silver_{t}": _ler_delta(spark, f"{origem}/{t}", ano_mes) for t in ("estabelecimentos", "empresas", "simples")
+    }
+    saida = _sql(spark, "gold/fato_empresa_mensal", **entradas)
+    _gravar_delta(saida, f"{destino}/fato_empresa_mensal", ano_mes)
 
 
 # Na ordem em que rodam. O bucket de origem é o da camada anterior (o silver_ibge_municipios lê o raw:
 # na AWS ele é a receita do DataBrew).
 JOBS = {
     "bronze_estabelecimentos": bronze_estabelecimentos,
+    "bronze_empresas": bronze_empresas,
+    "bronze_simples": bronze_simples,
     "bronze_dominios": bronze_dominios,
     "silver_estabelecimentos": silver_estabelecimentos,
+    "silver_empresas": silver_empresas,
+    "silver_simples": silver_simples,
     "silver_ibge_municipios": silver_ibge_municipios,
     "gold_dim_municipio": gold_dim_municipio,
-    "gold_ativas_por_uf": gold_ativas_por_uf,
+    "gold_dimensoes": gold_dimensoes,
+    "gold_fato_empresa_mensal": gold_fato_empresa_mensal,
 }
 CAMADA_ANTERIOR = {"bronze": "raw", "silver": "bronze", "gold": "silver"}
 

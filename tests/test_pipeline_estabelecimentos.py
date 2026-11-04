@@ -1,4 +1,4 @@
-"""Jobs de Estabelecimentos (bronze → silver → gold) pelo executor local. Roda no container do Glue:
+"""Jobs de Estabelecimentos (bronze → silver) pelo executor local. Roda no container do Glue:
 
     make test-spark
 """
@@ -40,43 +40,29 @@ def _estab(cnpj_basico, uf, matriz=True, situacao="02", **extra):
 def _rodar_pipeline(spark, raiz, ano_mes=ANO_MES):
     local.bronze_estabelecimentos(spark, str(raiz / "raw"), str(raiz / "bronze"), ano_mes)
     local.silver_estabelecimentos(spark, str(raiz / "bronze"), str(raiz / "silver"), ano_mes)
-    local.gold_ativas_por_uf(spark, str(raiz / "silver"), str(raiz / "gold"), ano_mes)
 
 
-def _gold(spark, raiz):
-    linhas = spark.read.format("delta").load(str(raiz / "gold" / "ativas_por_uf")).collect()
-    return sorted((r["ano_mes"], r["sigla_uf"], r["qtd_empresas_ativas"]) for r in linhas)
+def _ativas(spark, raiz):
+    linhas = spark.read.format("delta").load(str(raiz / "silver" / "estabelecimentos")).collect()
+    return sorted((r["ano_mes"], r["cnpj_basico"], r["cnpj_ordem"], r["empresa_ativa"]) for r in linhas)
 
 
-def test_gold_conta_matriz_ativa_na_uf(spark, tmp_path):
-    _gravar_raw(tmp_path / "raw", [_estab("00000001", "AC")])
-
-    _rodar_pipeline(spark, tmp_path)
-
-    assert _gold(spark, tmp_path) == [("2026-09", "AC", 1)]
-
-
-def test_filial_ativa_nao_conta_como_empresa(spark, tmp_path):
+def test_silver_marca_como_ativa_so_a_matriz_com_situacao_02(spark, tmp_path):
     _gravar_raw(tmp_path / "raw", [
         _estab("00000001", "AC"),
-        _estab("00000001", "AP", matriz=False),
-    ])
-
-    _rodar_pipeline(spark, tmp_path)
-
-    assert _gold(spark, tmp_path) == [("2026-09", "AC", 1)]
-
-
-def test_matriz_que_nao_esta_ativa_nao_conta(spark, tmp_path):
-    _gravar_raw(tmp_path / "raw", [
-        _estab("00000001", "AC"),
+        _estab("00000001", "AP", matriz=False),  # filial ativa
         _estab("00000002", "AC", situacao="08"),  # baixada
         _estab("00000003", "RR", situacao="04"),  # inapta
     ])
 
     _rodar_pipeline(spark, tmp_path)
 
-    assert _gold(spark, tmp_path) == [("2026-09", "AC", 1)]
+    assert _ativas(spark, tmp_path) == [
+        ("2026-09", "00000001", "0001", True),
+        ("2026-09", "00000001", "0002", False),
+        ("2026-09", "00000002", "0001", False),
+        ("2026-09", "00000003", "0001", False),
+    ]
 
 
 def _bronze(spark, raiz):
@@ -118,7 +104,11 @@ def test_reprocessar_um_mes_nao_duplica_nem_apaga_o_outro_mes(spark, tmp_path):
     _rodar_pipeline(spark, tmp_path, "2026-10")
     _rodar_pipeline(spark, tmp_path, "2026-09")
 
-    assert _gold(spark, tmp_path) == [("2026-09", "AC", 1), ("2026-10", "AC", 1), ("2026-10", "RR", 1)]
+    assert _ativas(spark, tmp_path) == [
+        ("2026-09", "00000001", "0001", True),
+        ("2026-10", "00000001", "0001", True),
+        ("2026-10", "00000002", "0001", True),
+    ]
 
 
 def test_bronze_descarta_o_endereco(spark, tmp_path):

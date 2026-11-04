@@ -1,3 +1,6 @@
+import datetime
+import decimal
+
 import psycopg
 import pyarrow as pa
 import pytest
@@ -5,47 +8,90 @@ from deltalake import write_deltalake
 
 from dashboard.carga import carregar_mes
 
+pytestmark = pytest.mark.postgres
 
-def _gravar_gold(raiz, linhas):
-    """Gold no mesmo esquema que o Spark grava (ano_mes, sigla_uf, qtd_empresas_ativas)."""
-    tabela = pa.table({
-        "ano_mes": [linha[0] for linha in linhas],
-        "sigla_uf": [linha[1] for linha in linhas],
-        "qtd_empresas_ativas": pa.array([linha[2] for linha in linhas], pa.int64()),
-    })
-    write_deltalake(str(raiz / "ativas_por_uf"), tabela, partition_by=["ano_mes"], mode="overwrite")
+MUNICIPIOS = [("0139", "1200401", "Rio Branco", "AC", "Norte"), ("0605", "1600303", "Macapá", "AP", "Norte")]
+CATEGORIAS = [("MEI", "MEI", 1), ("ME", "ME", 2), ("EPP", "EPP", 3), ("DEMAIS", "Demais", 4)]
 
 
-def _painel(conninfo):
+def _gravar_gold(raiz, fato):
+    """Gold no esquema que o Spark grava. `fato`: (ano_mes, cnpj_basico, id_municipio_rf, id_categoria)."""
+    write_deltalake(str(raiz / "dim_municipio"), pa.table({
+        nome: [m[i] for m in MUNICIPIOS]
+        for i, nome in enumerate(["id_municipio_rf", "id_municipio_ibge", "nome", "sigla_uf", "regiao"])
+    }), mode="overwrite")
+    write_deltalake(str(raiz / "dim_categoria"), pa.table({
+        "id_categoria": [c[0] for c in CATEGORIAS], "nome": [c[1] for c in CATEGORIAS],
+        "ordem": pa.array([c[2] for c in CATEGORIAS], pa.int32()),
+    }), mode="overwrite")
+    write_deltalake(str(raiz / "fato_empresa_mensal"), pa.table({
+        "cnpj_basico": [f[1] for f in fato],
+        "id_municipio_rf": [f[2] for f in fato],
+        "id_categoria": [f[3] for f in fato],
+        "id_cnae": ["4711302"] * len(fato),
+        "id_natureza_juridica": ["2135"] * len(fato),
+        "data_inicio_atividade": [datetime.date(2020, 1, 15)] * len(fato),
+        "capital_social": pa.array([decimal.Decimal("1000.00")] * len(fato), pa.decimal128(18, 2)),
+        "qtd_estabelecimentos": pa.array([1] * len(fato), pa.int64()),
+        "ano_mes": [f[0] for f in fato],
+    }), partition_by=["ano_mes"], mode="overwrite")
+
+
+def _painel(conninfo, visao="mv_categorias_uf"):
     with psycopg.connect(conninfo) as conexao, conexao.cursor() as cursor:
-        cursor.execute("SELECT ano_mes, sigla_uf, qtd_empresas_ativas FROM mv_ativas_por_uf ORDER BY 1, 2")
-        return cursor.fetchall()
+        cursor.execute(
+            f"SELECT ano_mes, sigla_uf, categoria, qtd_empresas, proporcao FROM {visao} ORDER BY 1, 2, ordem"
+        )
+        return [(a, uf, c, q, float(p)) for a, uf, c, q, p in cursor.fetchall()]
 
 
-@pytest.mark.postgres
-def test_carga_do_mes_aparece_na_visao_do_dashboard(postgres, tmp_path):
-    _gravar_gold(tmp_path, [("2026-09", "AC", 3), ("2026-09", "RR", 1)])
+FATO = [
+    ("2026-09", "00000001", "0139", "MEI"),
+    ("2026-09", "00000002", "0139", "MEI"),
+    ("2026-09", "00000003", "0139", "ME"),
+    ("2026-09", "00000004", "0605", "DEMAIS"),
+    ("2026-10", "00000001", "0139", "MEI"),
+]
+
+
+def test_carga_mostra_quantidade_e_proporcao_por_categoria(postgres, tmp_path):
+    _gravar_gold(tmp_path, FATO)
 
     carregar_mes(str(tmp_path), "2026-09", postgres)
 
-    assert _painel(postgres) == [("2026-09", "AC", 3), ("2026-09", "RR", 1)]
+    assert _painel(postgres) == [
+        ("2026-09", "AC", "MEI", 2, 0.6667),
+        ("2026-09", "AC", "ME", 1, 0.3333),
+        ("2026-09", "AP", "Demais", 1, 1.0),
+    ]
+    with psycopg.connect(postgres) as conexao:
+        regiao = conexao.execute(
+            "SELECT regiao, categoria, qtd_empresas FROM mv_categorias_regiao ORDER BY ordem"
+        ).fetchall()
+        municipio = conexao.execute(
+            "SELECT municipio, qtd_empresas FROM mv_categorias_municipio WHERE categoria = 'MEI'"
+        ).fetchall()
+    assert regiao == [("Norte", "MEI", 2), ("Norte", "ME", 1), ("Norte", "Demais", 1)]
+    assert municipio == [("Rio Branco", 2)]
 
 
-@pytest.mark.postgres
 def test_carregar_o_mesmo_mes_duas_vezes_da_o_mesmo_resultado(postgres, tmp_path):
-    _gravar_gold(tmp_path, [("2026-09", "AC", 3), ("2026-09", "RR", 1)])
+    _gravar_gold(tmp_path, FATO)
 
     carregar_mes(str(tmp_path), "2026-09", postgres)
+    primeira = _painel(postgres)
     carregar_mes(str(tmp_path), "2026-09", postgres)
 
-    assert _painel(postgres) == [("2026-09", "AC", 3), ("2026-09", "RR", 1)]
+    assert _painel(postgres) == primeira
 
 
-@pytest.mark.postgres
 def test_carregar_um_mes_nao_apaga_o_outro(postgres, tmp_path):
-    _gravar_gold(tmp_path, [("2026-09", "AC", 3), ("2026-10", "AC", 4)])
+    _gravar_gold(tmp_path, FATO)
 
     carregar_mes(str(tmp_path), "2026-09", postgres)
     carregar_mes(str(tmp_path), "2026-10", postgres)
 
-    assert _painel(postgres) == [("2026-09", "AC", 3), ("2026-10", "AC", 4)]
+    assert [linha[:4] for linha in _painel(postgres)] == [
+        ("2026-09", "AC", "MEI", 2), ("2026-09", "AC", "ME", 1), ("2026-09", "AP", "Demais", 1),
+        ("2026-10", "AC", "MEI", 1),
+    ]

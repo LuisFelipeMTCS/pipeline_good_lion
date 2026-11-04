@@ -1,0 +1,80 @@
+{
+  "Name": "silver_simples",
+  "Description": "bronze -> silver de Simples, limitado por --ano_mes",
+  "Role": "arn:aws:iam::724793286570:role/glue-pipeline",
+  "GlueVersion": "5.0",
+  "WorkerType": "G.1X",
+  "NumberOfWorkers": 2,
+  "ExecutionClass": "FLEX",
+  "MaxRetries": 1,
+  "Timeout": 30,
+  "Command": {
+    "Name": "glueetl",
+    "ScriptLocation": "s3://goodlion-artifacts-724793286570/scripts/silver_simples.py",
+    "PythonVersion": "3"
+  },
+  "DefaultArguments": {
+    "--conf": "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension --conf spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog",
+    "--ambiente": "sample",
+    "--job-bookmark-option": "job-bookmark-disable",
+    "--job-language": "python",
+    "--datalake-formats": "delta",
+    "--TempDir": "s3://goodlion-artifacts-724793286570/temporary/",
+    "--bucket": "goodlion-silver-724793286570",
+    "--enable-continuous-cloudwatch-log": "true"
+  },
+  "CodeGenConfigurationNodes": {
+    "node-simples": {
+      "S3DeltaSource": {
+        "Name": "bronze_simples",
+        "Paths": [
+          "s3://goodlion-bronze-724793286570/sample/simples/"
+        ]
+      }
+    },
+    "node-filtrar-simples": {
+      "CustomCode": {
+        "Name": "filtrar_simples",
+        "Inputs": [
+          "node-simples"
+        ],
+        "Code": "@arquivo:jobs/custom/filtrar_mes.py",
+        "ClassName": "FiltrarMesSimples"
+      }
+    },
+    "node-mes-simples": {
+      "SelectFromCollection": {
+        "Name": "mes_simples",
+        "Inputs": [
+          "node-filtrar-simples"
+        ],
+        "Index": 0
+      }
+    },
+    "node-sql": {
+      "SparkSQL": {
+        "Name": "silver_simples",
+        "Inputs": [
+          "node-mes-simples"
+        ],
+        "SqlQuery": "@arquivo:jobs/sql/silver/simples.sql",
+        "SqlAliases": [
+          {
+            "From": "node-mes-simples",
+            "Alias": "bronze_simples"
+          }
+        ]
+      }
+    },
+    "node-gravar": {
+      "CustomCode": {
+        "Name": "gravar_delta",
+        "Inputs": [
+          "node-sql"
+        ],
+        "Code": "@arquivo:jobs/custom/gravar_delta.py",
+        "ClassName": "GravarDelta"
+      }
+    }
+  }
+}

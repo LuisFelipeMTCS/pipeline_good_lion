@@ -38,6 +38,8 @@ def spark():
 
     sessao = criar_spark(master="local[1]")
     sessao.conf.set("spark.sql.shuffle.partitions", "1")
+    # O Delta lê o log em 50 partições por padrão: com tabelas de teste minúsculas, só atrasa.
+    sessao.conf.set("spark.databricks.delta.snapshotPartitions", "1")
     yield sessao
     sessao.stop()
 

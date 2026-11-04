@@ -73,7 +73,8 @@ pipeline_good_lion/
 │   ├── referencias/             # tabelas manuais versionadas (correções Receita × IBGE), enviadas ao artifacts
 │   ├── custom/                  # corpo dos nós Custom Transform (o Glue embrulha numa função)
 │   │   ├── garantir_esquema.py  # Bronze: dá as colunas do Catalog ao lote vazio do Bookmark
-│   │   ├── gravar_delta.py      # Bronze: grava Delta com replaceWhere nos meses do lote
+│   │   ├── gravar_delta.py      # grava Delta com replaceWhere nos meses do lote (dimensão: regrava inteira)
+│   │   ├── filtrar_mes.py       # Silver e Gold: limita a origem Delta ao --ano_mes
 │   │   ├── merge_consolidada.py # MERGE na silver_empresa_consolidada (Change Data Feed ligado)
 │   │   └── manutencao.py        # OPTIMIZE + VACUUM (7 dias)
 │   ├── spark.py                 # SparkSession com Delta para o container local
@@ -130,6 +131,7 @@ Catalog (goodlion_raw.<tabela>) → GarantirEsquema → SelectFromCollection →
 - **Custom Transform:** o campo `Code` é o **corpo** da função; o Glue o embrulha em `def <ClassName>(glueContext, dfc)`. Por isso os arquivos de `jobs/custom/` têm `return` solto. Para usar a saída num nó seguinte, é preciso um `SelectFromCollection`.
 - **Gravação:** o nó Target Delta do Studio não tem `replaceWhere`, então a gravação é o Custom Transform `GravarDelta`. Ele substitui só os meses presentes no lote; tabela sem `ano_mes` (dimensão) é regravada inteira.
 - **Nome da tabela vem do nó anterior (ticket 07):** o Glue entrega ao Custom Transform um `dfc` com a chave `<Name do nó anterior>_<id do nó sem hífens>` (ex.: `bronze_cnaes_nodesqlcnaes`). Por isso o nó que alimenta o `GravarDelta` se chama `<camada>_<tabela>`, e a origem que alimenta o `GarantirEsquema` se chama `raw_<tabela>`. É o que permite um job só gravar várias tabelas (`bronze_dominios`, 6 ramos). O `tests/test_deploy_jobs.py` confere a regra em todos os JSON.
+- **Silver e Gold (ticket 08):** `S3DeltaSource → FiltrarMes → SelectFromCollection → SQL → GravarDelta`. O `FiltrarMes` lê o `--ano_mes` (nenhum nó visual lê parâmetro) e filtra a partição. Um SQL com várias entradas recebe uma origem filtrada por tabela (`gold_fato_empresa_mensal`). As dimensões sem mês (`gold_dimensoes`, `gold_dim_municipio`) leem a origem inteira.
 - **Domínios e IBGE sem recorte:** o domínio de municípios e a lista do IBGE são do Brasil inteiro mesmo na amostra. A saída do DataBrew fica em `silver/ibge_municipios/` (Parquet, sem `sample/`).
 - **Bookmark sem arquivos novos:** a origem vem **sem colunas** e o SQL falharia; o `GarantirEsquema` devolve um lote vazio com as colunas do Catalog.
 - **Origem pelo Catalog:** é ela que traz a coluna `ano_mes` (partição). O esquema do raw é do Terraform, tudo texto: o crawler deduzia `bigint` e o `cnpj_basico` perdia os zeros à esquerda.

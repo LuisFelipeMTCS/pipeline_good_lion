@@ -1,12 +1,63 @@
 -- Esquema do dashboard no Postgres. Idempotente: roda no início de toda carga.
-CREATE TABLE IF NOT EXISTS ativas_por_uf (
-    ano_mes             text   NOT NULL,
-    sigla_uf            text   NOT NULL,
-    qtd_empresas_ativas bigint NOT NULL
+
+-- Gold provisória do ticket 02, substituída pela fato no ticket 08.
+DROP MATERIALIZED VIEW IF EXISTS mv_ativas_por_uf;
+DROP TABLE IF EXISTS ativas_por_uf;
+
+CREATE TABLE IF NOT EXISTS fato_empresa_mensal (
+    ano_mes               text    NOT NULL,
+    cnpj_basico           text    NOT NULL,
+    id_municipio_rf       text,
+    id_categoria          text    NOT NULL,
+    id_cnae               text,
+    id_natureza_juridica  text,
+    data_inicio_atividade date,
+    capital_social        numeric(18, 2),
+    qtd_estabelecimentos  bigint  NOT NULL
 );
 
--- O Metabase lê só as visões materializadas.
-CREATE MATERIALIZED VIEW IF NOT EXISTS mv_ativas_por_uf AS
-SELECT ano_mes, sigla_uf, SUM(qtd_empresas_ativas)::bigint AS qtd_empresas_ativas
-FROM ativas_por_uf
-GROUP BY ano_mes, sigla_uf;
+CREATE TABLE IF NOT EXISTS dim_municipio (
+    id_municipio_rf   text PRIMARY KEY,
+    id_municipio_ibge text,
+    nome              text,
+    sigla_uf          text,
+    regiao            text
+);
+
+CREATE TABLE IF NOT EXISTS dim_categoria (
+    id_categoria text PRIMARY KEY,
+    nome         text NOT NULL,
+    ordem        int  NOT NULL
+);
+
+-- O Metabase lê só as visões materializadas. Pergunta 1: quantidade e proporção de MEI, ME, EPP e Demais.
+-- A proporção é sobre o total de empresas ativas do lugar no mês.
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_categorias_municipio AS
+SELECT
+    f.ano_mes, m.regiao, m.sigla_uf, m.nome AS municipio, c.nome AS categoria, c.ordem,
+    COUNT(*) AS qtd_empresas,
+    ROUND(COUNT(*)::numeric / SUM(COUNT(*)) OVER (PARTITION BY f.ano_mes, f.id_municipio_rf), 4) AS proporcao
+FROM fato_empresa_mensal AS f
+JOIN dim_municipio AS m USING (id_municipio_rf)
+JOIN dim_categoria AS c USING (id_categoria)
+GROUP BY f.ano_mes, f.id_municipio_rf, m.regiao, m.sigla_uf, m.nome, c.nome, c.ordem;
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_categorias_uf AS
+SELECT
+    f.ano_mes, m.regiao, m.sigla_uf, c.nome AS categoria, c.ordem,
+    COUNT(*) AS qtd_empresas,
+    ROUND(COUNT(*)::numeric / SUM(COUNT(*)) OVER (PARTITION BY f.ano_mes, m.sigla_uf), 4) AS proporcao
+FROM fato_empresa_mensal AS f
+JOIN dim_municipio AS m USING (id_municipio_rf)
+JOIN dim_categoria AS c USING (id_categoria)
+GROUP BY f.ano_mes, m.regiao, m.sigla_uf, c.nome, c.ordem;
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_categorias_regiao AS
+SELECT
+    f.ano_mes, m.regiao, c.nome AS categoria, c.ordem,
+    COUNT(*) AS qtd_empresas,
+    ROUND(COUNT(*)::numeric / SUM(COUNT(*)) OVER (PARTITION BY f.ano_mes, m.regiao), 4) AS proporcao
+FROM fato_empresa_mensal AS f
+JOIN dim_municipio AS m USING (id_municipio_rf)
+JOIN dim_categoria AS c USING (id_categoria)
+GROUP BY f.ano_mes, m.regiao, c.nome, c.ordem;

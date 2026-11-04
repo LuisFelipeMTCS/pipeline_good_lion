@@ -1,0 +1,152 @@
+{
+  "Name": "gold_dimensoes",
+  "Description": "dim_categoria, dim_cnae, dim_natureza_juridica e dim_tempo",
+  "Role": "arn:aws:iam::724793286570:role/glue-pipeline",
+  "GlueVersion": "5.0",
+  "WorkerType": "G.1X",
+  "NumberOfWorkers": 2,
+  "ExecutionClass": "FLEX",
+  "MaxRetries": 1,
+  "Timeout": 30,
+  "Command": {
+    "Name": "glueetl",
+    "ScriptLocation": "s3://goodlion-artifacts-724793286570/scripts/gold_dimensoes.py",
+    "PythonVersion": "3"
+  },
+  "DefaultArguments": {
+    "--conf": "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension --conf spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog",
+    "--ambiente": "sample",
+    "--job-bookmark-option": "job-bookmark-disable",
+    "--job-language": "python",
+    "--datalake-formats": "delta",
+    "--TempDir": "s3://goodlion-artifacts-724793286570/temporary/",
+    "--bucket": "goodlion-gold-724793286570",
+    "--enable-continuous-cloudwatch-log": "true"
+  },
+  "CodeGenConfigurationNodes": {
+    "node-cnaes": {
+      "S3DeltaSource": {
+        "Name": "bronze_cnaes",
+        "Paths": [
+          "s3://goodlion-bronze-724793286570/sample/cnaes/"
+        ]
+      }
+    },
+    "node-naturezas": {
+      "S3DeltaSource": {
+        "Name": "bronze_naturezas",
+        "Paths": [
+          "s3://goodlion-bronze-724793286570/sample/naturezas/"
+        ]
+      }
+    },
+    "node-estabelecimentos": {
+      "S3DeltaSource": {
+        "Name": "silver_estabelecimentos",
+        "Paths": [
+          "s3://goodlion-silver-724793286570/sample/estabelecimentos/"
+        ]
+      }
+    },
+    "node-sql-categoria": {
+      "SparkSQL": {
+        "Name": "gold_dim_categoria",
+        "Inputs": [
+          "node-cnaes"
+        ],
+        "SqlQuery": "@arquivo:jobs/sql/gold/dim_categoria.sql",
+        "SqlAliases": [
+          {
+            "From": "node-cnaes",
+            "Alias": "bronze_cnaes"
+          }
+        ]
+      }
+    },
+    "node-gravar-categoria": {
+      "CustomCode": {
+        "Name": "gravar_categoria",
+        "Inputs": [
+          "node-sql-categoria"
+        ],
+        "Code": "@arquivo:jobs/custom/gravar_delta.py",
+        "ClassName": "GravarDeltaCategoria"
+      }
+    },
+    "node-sql-cnae": {
+      "SparkSQL": {
+        "Name": "gold_dim_cnae",
+        "Inputs": [
+          "node-cnaes"
+        ],
+        "SqlQuery": "@arquivo:jobs/sql/gold/dim_cnae.sql",
+        "SqlAliases": [
+          {
+            "From": "node-cnaes",
+            "Alias": "bronze_cnaes"
+          }
+        ]
+      }
+    },
+    "node-gravar-cnae": {
+      "CustomCode": {
+        "Name": "gravar_cnae",
+        "Inputs": [
+          "node-sql-cnae"
+        ],
+        "Code": "@arquivo:jobs/custom/gravar_delta.py",
+        "ClassName": "GravarDeltaCnae"
+      }
+    },
+    "node-sql-natureza_juridica": {
+      "SparkSQL": {
+        "Name": "gold_dim_natureza_juridica",
+        "Inputs": [
+          "node-naturezas"
+        ],
+        "SqlQuery": "@arquivo:jobs/sql/gold/dim_natureza_juridica.sql",
+        "SqlAliases": [
+          {
+            "From": "node-naturezas",
+            "Alias": "bronze_naturezas"
+          }
+        ]
+      }
+    },
+    "node-gravar-natureza_juridica": {
+      "CustomCode": {
+        "Name": "gravar_natureza_juridica",
+        "Inputs": [
+          "node-sql-natureza_juridica"
+        ],
+        "Code": "@arquivo:jobs/custom/gravar_delta.py",
+        "ClassName": "GravarDeltaNaturezaJuridica"
+      }
+    },
+    "node-sql-tempo": {
+      "SparkSQL": {
+        "Name": "gold_dim_tempo",
+        "Inputs": [
+          "node-estabelecimentos"
+        ],
+        "SqlQuery": "@arquivo:jobs/sql/gold/dim_tempo.sql",
+        "SqlAliases": [
+          {
+            "From": "node-estabelecimentos",
+            "Alias": "silver_estabelecimentos"
+          }
+        ]
+      }
+    },
+    "node-gravar-tempo": {
+      "CustomCode": {
+        "Name": "gravar_tempo",
+        "Inputs": [
+          "node-sql-tempo"
+        ],
+        "Code": "@arquivo:jobs/custom/gravar_delta.py",
+        "ClassName": "GravarDeltaTempo"
+      }
+    }
+  }
+}
