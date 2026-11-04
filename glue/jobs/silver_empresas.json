@@ -53,7 +53,7 @@
     },
     "node-sql": {
       "SparkSQL": {
-        "Name": "silver_empresas",
+        "Name": "limpar_empresas",
         "Inputs": [
           "node-mes-empresas"
         ],
@@ -70,10 +70,45 @@
       "CustomCode": {
         "Name": "gravar_delta",
         "Inputs": [
-          "node-sql"
+          "node-dq-alertas"
         ],
         "Code": "@arquivo:jobs/custom/gravar_delta.py",
         "ClassName": "GravarDelta"
+      }
+    },
+    "node-dq": {
+      "EvaluateDataQuality": {
+        "Name": "qualidade_empresas",
+        "Inputs": [
+          "node-sql"
+        ],
+        "Ruleset": "@arquivo:jobs/quality/silver_empresas.dqdl",
+        "Output": "PrimaryInput",
+        "PublishingOptions": {
+          "EvaluationContext": "silver_empresas",
+          "ResultsS3Prefix": "s3://goodlion-artifacts-724793286570/dq/",
+          "CloudWatchMetricsEnabled": false,
+          "ResultsPublishingEnabled": true
+        },
+        "StopJobOnFailureOptions": {
+          "StopJobOnFailureTiming": "Immediate"
+        }
+      }
+    },
+    "node-dq-alertas": {
+      "EvaluateDataQuality": {
+        "Name": "silver_empresas",
+        "Inputs": [
+          "node-dq"
+        ],
+        "Ruleset": "@arquivo:jobs/quality/silver_empresas_alertas.dqdl",
+        "Output": "PrimaryInput",
+        "PublishingOptions": {
+          "EvaluationContext": "silver_empresas_alertas",
+          "ResultsS3Prefix": "s3://goodlion-artifacts-724793286570/dq/",
+          "CloudWatchMetricsEnabled": false,
+          "ResultsPublishingEnabled": true
+        }
       }
     }
   }

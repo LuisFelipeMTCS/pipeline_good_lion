@@ -1,0 +1,7 @@
+Rules = [
+    IsComplete "cnpj_basico",
+    ColumnValues "cnpj_basico" matches "[0-9]{8}",
+    IsUnique "cnpj_basico",
+    ColumnValues "id_categoria" in ["MEI", "ME", "EPP", "DEMAIS"],
+    ColumnValues "capital_social" >= 0
+]

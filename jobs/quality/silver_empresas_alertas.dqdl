@@ -1,0 +1,4 @@
+Rules = [
+    RowCount >= avg(last(1)) * 0.95,
+    RowCount <= avg(last(1)) * 1.05
+]

@@ -124,3 +124,12 @@ def test_bronze_descarta_o_endereco(spark, tmp_path):
     assert colunas.isdisjoint({"tipo_logradouro", "logradouro", "numero", "complemento", "bairro", "cep"})
     assert {"email", "nome_fantasia", "sigla_uf", "id_municipio_rf"} <= colunas
 
+
+def test_silver_troca_email_vazio_por_nulo(spark, tmp_path):
+    _gravar_raw(tmp_path / "raw", [_estab("00000001", "AC"), _estab("00000002", "AC", email="X@Y.COM")])
+
+    _rodar_pipeline(spark, tmp_path)
+
+    linhas = spark.read.format("delta").load(str(tmp_path / "silver" / "estabelecimentos")).collect()
+    assert sorted((r["cnpj_basico"], r["email"]) for r in linhas) == [("00000001", None), ("00000002", "X@Y.COM")]
+

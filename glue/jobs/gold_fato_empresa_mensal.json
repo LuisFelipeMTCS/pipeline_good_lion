@@ -107,7 +107,7 @@
     },
     "node-sql": {
       "SparkSQL": {
-        "Name": "gold_fato_empresa_mensal",
+        "Name": "montar_fato",
         "Inputs": [
           "node-mes-estabelecimentos",
           "node-mes-empresas",
@@ -134,10 +134,29 @@
       "CustomCode": {
         "Name": "gravar_delta",
         "Inputs": [
-          "node-sql"
+          "node-dq"
         ],
         "Code": "@arquivo:jobs/custom/gravar_delta.py",
         "ClassName": "GravarDelta"
+      }
+    },
+    "node-dq": {
+      "EvaluateDataQuality": {
+        "Name": "gold_fato_empresa_mensal",
+        "Inputs": [
+          "node-sql"
+        ],
+        "Ruleset": "@arquivo:jobs/quality/gold_fato_empresa_mensal.dqdl",
+        "Output": "PrimaryInput",
+        "PublishingOptions": {
+          "EvaluationContext": "gold_fato_empresa_mensal",
+          "ResultsS3Prefix": "s3://goodlion-artifacts-724793286570/dq/",
+          "CloudWatchMetricsEnabled": false,
+          "ResultsPublishingEnabled": true
+        },
+        "StopJobOnFailureOptions": {
+          "StopJobOnFailureTiming": "Immediate"
+        }
       }
     }
   }

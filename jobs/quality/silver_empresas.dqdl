@@ -1,0 +1,7 @@
+Rules = [
+    IsComplete "cnpj_basico",
+    ColumnValues "cnpj_basico" matches "[0-9]{8}",
+    ColumnValues "porte" in ["00", "01", "03", "05"],
+    IsComplete "capital_social",
+    ColumnValues "capital_social" >= 0
+]

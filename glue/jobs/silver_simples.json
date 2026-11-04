@@ -53,7 +53,7 @@
     },
     "node-sql": {
       "SparkSQL": {
-        "Name": "silver_simples",
+        "Name": "limpar_simples",
         "Inputs": [
           "node-mes-simples"
         ],
@@ -70,10 +70,45 @@
       "CustomCode": {
         "Name": "gravar_delta",
         "Inputs": [
-          "node-sql"
+          "node-dq-alertas"
         ],
         "Code": "@arquivo:jobs/custom/gravar_delta.py",
         "ClassName": "GravarDelta"
+      }
+    },
+    "node-dq": {
+      "EvaluateDataQuality": {
+        "Name": "qualidade_simples",
+        "Inputs": [
+          "node-sql"
+        ],
+        "Ruleset": "@arquivo:jobs/quality/silver_simples.dqdl",
+        "Output": "PrimaryInput",
+        "PublishingOptions": {
+          "EvaluationContext": "silver_simples",
+          "ResultsS3Prefix": "s3://goodlion-artifacts-724793286570/dq/",
+          "CloudWatchMetricsEnabled": false,
+          "ResultsPublishingEnabled": true
+        },
+        "StopJobOnFailureOptions": {
+          "StopJobOnFailureTiming": "Immediate"
+        }
+      }
+    },
+    "node-dq-alertas": {
+      "EvaluateDataQuality": {
+        "Name": "silver_simples",
+        "Inputs": [
+          "node-dq"
+        ],
+        "Ruleset": "@arquivo:jobs/quality/silver_simples_alertas.dqdl",
+        "Output": "PrimaryInput",
+        "PublishingOptions": {
+          "EvaluationContext": "silver_simples_alertas",
+          "ResultsS3Prefix": "s3://goodlion-artifacts-724793286570/dq/",
+          "CloudWatchMetricsEnabled": false,
+          "ResultsPublishingEnabled": true
+        }
       }
     }
   }

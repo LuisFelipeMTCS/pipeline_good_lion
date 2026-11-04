@@ -1,0 +1,4 @@
+Rules = [
+    IsComplete "cnpj_basico",
+    ColumnValues "cnpj_basico" matches "[0-9]{8}"
+]

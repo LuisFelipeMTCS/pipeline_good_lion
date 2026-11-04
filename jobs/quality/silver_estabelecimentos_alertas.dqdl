@@ -1,0 +1,6 @@
+Rules = [
+    RowCount >= avg(last(1)) * 0.95,
+    RowCount <= avg(last(1)) * 1.05,
+    ColumnValues "data_inicio_atividade" <= now(),
+    Completeness "email" >= 0.5
+]
