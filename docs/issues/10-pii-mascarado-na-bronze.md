@@ -6,11 +6,26 @@ O descarte é regra de negócio e fica no SQL da Bronze (`jobs/sql/bronze/`), te
 
 **Bloqueado por:** 04
 
-**Status:** ready-for-agent
+**Status:** in-progress (SQL e nó prontos; falta rodar na AWS e decidir o mascaramento do telefone)
 
 - [ ] Nó Detect Sensitive Data nos jobs Bronze que têm colunas de texto candidatas, restrito a essas colunas, e versionado no JSON do job em `glue/jobs/`
 - [ ] E-mail, telefone/fax e CPF mascarados
-- [ ] Logradouro, número, complemento, bairro, CEP e razão social descartados no SQL da Bronze (`jobs/sql/bronze/`), com teste local com pytest
+- [x] Logradouro, número, complemento, bairro, CEP e razão social descartados no SQL da Bronze (`jobs/sql/bronze/`), com teste local com pytest
 - [ ] Consulta de verificação no Athena: nenhum padrão de CPF ou e-mail encontrado em nenhuma tabela Bronze da amostra (print em `docs/evidencias/`)
 - [ ] Tempo e custo do nó medidos na amostra, com estimativa para a base completa
 - [ ] Se a Bronze de Empresas e Simples (ticket 08) já existir, ela também recebe o nó
+
+## Andamento (03/11/2026)
+
+**Feito:**
+- `jobs/sql/bronze/estabelecimentos.sql` descarta tipo de logradouro, logradouro, número, complemento, bairro e CEP; teste `test_bronze_descarta_o_endereco`. A razão social é descartada na Bronze de Empresas (ticket 08).
+- Nó Detect Sensitive Data (`PIIDetection`, `RowMasking`, sensibilidade alta) no `glue/jobs/bronze_estabelecimentos.json`, entre o SQL e o `GravarDelta`. Ele fica depois do SQL porque assim só varre o que sobrou da minimização, e só nas colunas candidatas: `EMAIL` em `email` e `BRAZIL_NATURAL_PERSON_REGISTRY_NUMBER` (CPF) em `nome_fantasia`. O `GravarDelta` descarta a coluna `DetectedEntities` que o nó acrescenta.
+- Linha de base do que precisa ser mascarado: `docs/evidencias/10-pii.md`.
+
+**Telefone e fax: decisão pendente.** O tipo gerenciado `PHONE_NUMBER` do Glue só reconhece números dos EUA e do Canadá (documentação "Managed data types"), e não há tipo de telefone brasileiro. Os caminhos são: (a) tipo personalizado `TELEFONE_BR` por regex (`CreateCustomEntityType`, sem recurso no Terraform); (b) mascarar no SQL; (c) descartar as colunas, já que nenhuma pergunta usa telefone.
+
+**Falta na AWS:**
+1. `make deploy-jobs`.
+2. Apagar `bronze/sample/estabelecimentos/` e zerar o Bookmark (`aws glue reset-job-bookmark --job-name bronze_estabelecimentos`): os meses já gravados ainda têm endereço e e-mail.
+3. Rodar o job, a consulta de verificação no Athena e medir tempo e DPU contra os 205 s do ticket 04.
+

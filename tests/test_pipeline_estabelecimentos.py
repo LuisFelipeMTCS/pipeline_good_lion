@@ -100,7 +100,7 @@ def test_bronze_converte_datas_aaaammdd_e_zeros_viram_nulo(spark, tmp_path):
 
 
 def test_bronze_mantem_zeros_a_esquerda_dos_codigos(spark, tmp_path):
-    _gravar_raw(tmp_path / "raw", [_estab("00000001", "AC", cep="01001000", id_municipio_rf="0139")])
+    _gravar_raw(tmp_path / "raw", [_estab("00000001", "AC", id_municipio_rf="0139")])
 
     local.bronze_estabelecimentos(spark, str(tmp_path / "raw"), str(tmp_path / "bronze"), ANO_MES)
 
@@ -119,3 +119,18 @@ def test_reprocessar_um_mes_nao_duplica_nem_apaga_o_outro_mes(spark, tmp_path):
     _rodar_pipeline(spark, tmp_path, "2026-09")
 
     assert _gold(spark, tmp_path) == [("2026-09", "AC", 1), ("2026-10", "AC", 1), ("2026-10", "RR", 1)]
+
+
+def test_bronze_descarta_o_endereco(spark, tmp_path):
+    _gravar_raw(tmp_path / "raw", [_estab(
+        "00000001", "AC",
+        tipo_logradouro="RUA", logradouro="DAS FLORES", numero="10", complemento="CASA 2",
+        bairro="CENTRO", cep="69900000",
+    )])
+
+    local.bronze_estabelecimentos(spark, str(tmp_path / "raw"), str(tmp_path / "bronze"), ANO_MES)
+
+    colunas = set(_bronze(spark, tmp_path).columns)
+    assert colunas.isdisjoint({"tipo_logradouro", "logradouro", "numero", "complemento", "bairro", "cep"})
+    assert {"email", "nome_fantasia", "sigla_uf", "id_municipio_rf"} <= colunas
+

@@ -1,6 +1,6 @@
 {
   "Name": "bronze_estabelecimentos",
-  "Description": "raw (CSV) -> bronze (Delta) de Estabelecimentos, com Job Bookmarks",
+  "Description": "raw (CSV) -> bronze (Delta) de Estabelecimentos, com Job Bookmarks e PII mascarado",
   "Role": "arn:aws:iam::724793286570:role/glue-pipeline",
   "GlueVersion": "5.0",
   "WorkerType": "G.1X",
@@ -36,7 +36,7 @@
       "CustomCode": {
         "Name": "gravar_delta",
         "Inputs": [
-          "node-sql"
+          "node-pii"
         ],
         "Code": "@arquivo:jobs/custom/gravar_delta.py",
         "ClassName": "GravarDelta"
@@ -63,7 +63,7 @@
     },
     "node-sql": {
       "SparkSQL": {
-        "Name": "bronze_estabelecimentos",
+        "Name": "tipar_estabelecimentos",
         "Inputs": [
           "node-selecionar"
         ],
@@ -75,7 +75,22 @@
           }
         ]
       }
+    },
+    "node-pii": {
+      "PIIDetection": {
+        "Name": "bronze_estabelecimentos",
+        "Inputs": [
+          "node-sql"
+        ],
+        "PiiType": "RowMasking",
+        "EntityTypesToDetect": [
+          "EMAIL",
+          "BRAZIL_NATURAL_PERSON_REGISTRY_NUMBER"
+        ],
+        "DetectionParameters": "{\"EMAIL\": [{\"action\": \"REDACT\", \"sourceColumns\": [\"email\"], \"actionOptions\": {\"redactText\": \"*****\"}}], \"BRAZIL_NATURAL_PERSON_REGISTRY_NUMBER\": [{\"action\": \"REDACT\", \"sourceColumns\": [\"nome_fantasia\"], \"actionOptions\": {\"redactText\": \"*****\"}}]}",
+        "DetectionSensitivity": "HIGH",
+        "OutputColumnName": "DetectedEntities"
+      }
     }
   }
 }
-
