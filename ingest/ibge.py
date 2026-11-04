@@ -27,6 +27,25 @@ def ingerir(ano_mes, s3, bucket, prefixo="", url=URL):
     return municipios
 
 
+def propriedades_do_workflow(argv, glue=None):
+    """Propriedades da execução do Glue Workflow (ano_mes, ingestao), ou {} fora dele: dentro de um Workflow
+    o Glue passa --WORKFLOW_NAME e --WORKFLOW_RUN_ID ao job."""
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--WORKFLOW_NAME")
+    parser.add_argument("--WORKFLOW_RUN_ID")
+    args, _ = parser.parse_known_args(argv)
+    if not args.WORKFLOW_RUN_ID:
+        return {}
+    if glue is None:
+        import boto3
+
+        glue = boto3.client("glue")
+    resposta = glue.get_workflow_run_properties(Name=args.WORKFLOW_NAME, RunId=args.WORKFLOW_RUN_ID)
+    return resposta["RunProperties"]
+
+
 def main(argv=None):
     import argparse
     import os
@@ -35,17 +54,18 @@ def main(argv=None):
     import boto3
 
     parser = argparse.ArgumentParser(description="Grava os municípios do IBGE no raw.")
-    parser.add_argument("--ano_mes", required=True, help="AAAA-MM")
+    parser.add_argument("--ano_mes", help="AAAA-MM; dentro do Workflow vem das propriedades da execução")
     parser.add_argument("--bucket", required=True)
     parser.add_argument("--prefixo", default="")
     args, _ = parser.parse_known_args(argv)  # o Glue acrescenta os próprios argumentos
+    ano_mes = args.ano_mes or propriedades_do_workflow(argv)["ano_mes"]
 
     # S3_ENDPOINT aponta para o MinIO local; na AWS fica vazio e o boto3 usa o S3.
     s3 = boto3.client("s3", endpoint_url=os.environ.get("S3_ENDPOINT") or None)
     inicio = time.time()
-    municipios = ingerir(args.ano_mes, s3, args.bucket, args.prefixo)
+    municipios = ingerir(ano_mes, s3, args.bucket, args.prefixo)
     # Linha lida pelo dashboard do CloudWatch (duração por execução).
-    print(f"resumo job=ingest_ibge segundos={int(time.time() - inicio)} linhas={municipios} meses={args.ano_mes}")
+    print(f"resumo job=ingest_ibge segundos={int(time.time() - inicio)} linhas={municipios} meses={ano_mes}")
 
 
 if __name__ == "__main__":

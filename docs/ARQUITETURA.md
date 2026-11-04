@@ -60,6 +60,7 @@ pipeline_good_lion/
 │   └── budget.tf                # alertas em US$ 5 e US$ 8 (o Budgets avisa, não bloqueia gastos)
 │
 ├── ingest/                      # GATEWAYS: jobs Python shell (Py 3.9, só stdlib + boto3, sem Spark)
+│   ├── definir_mes.py           # 1º passo do Workflow: fixa o ano_mes nas propriedades da execução
 │   ├── receita.py               # WebDAV da Receita → ZIP → UTF-8 com cabeçalho → raw
 │   ├── ibge.py                  # API de municípios do IBGE → raw
 │   └── trigger_databrew.py      # dispara a receita do DataBrew e espera terminar
@@ -106,7 +107,7 @@ pipeline_good_lion/
 | Tabelas da Gold | `dim_<entidade>` no singular, `fato_<assunto>` | `dim_municipio`, `fato_empresa_mensal` |
 | Colunas | snake_case com os nomes do SDK da Base dos Dados | `id_municipio_rf` |
 | Gravação | Nunca `append`: `replaceWhere` por `ano_mes` ou `MERGE` | — |
-| Parâmetros | Todo job recebe `--ano_mes`, `--bucket` (bucket de destino), `--ambiente` (`sample`/`full`). Na Bronze o `--ano_mes` não é usado: quem limita a leitura é o Bookmark (PRD, 5.4) | `--bucket goodlion-bronze-<conta>` |
+| Parâmetros | Todo job recebe `--ano_mes`, `--bucket` (bucket de destino), `--ambiente` (`sample`/`full`). Dentro do Glue Workflow o `--ano_mes` não vem: o mês está nas propriedades da execução (fixadas pelo `ingest/definir_mes.py`), e os jobs leem de lá. Na Bronze o `--ano_mes` não é usado: quem limita a leitura é o Bookmark (PRD, 5.4) | `--bucket goodlion-bronze-<conta>` |
 | O ambiente | É parâmetro do job, **não** variável do Terraform: a infraestrutura é uma só | — |
 | Código | Nomes em português, ruff, `ingest/` compatível com Py 3.9 | — |
 | Testes | `make test` no host (sem Spark); `make test-spark` no container do Glue | — |

@@ -6,19 +6,28 @@
 import sys
 import time
 
+import boto3
 from awsglue.utils import getResolvedOptions
 from pyspark.errors import AnalysisException
 from pyspark.sql import functions as F
 
-args = getResolvedOptions(sys.argv, ["JOB_NAME", "ano_mes", "bucket", "ambiente"])
+args = getResolvedOptions(sys.argv, ["JOB_NAME", "bucket", "ambiente"])
+# O mês vem do --ano_mes (execução manual) ou, dentro do Workflow, das propriedades da execução.
+if "--ano_mes" in sys.argv:
+    ano_mes = getResolvedOptions(sys.argv, ["ano_mes"])["ano_mes"]
+else:
+    workflow = getResolvedOptions(sys.argv, ["WORKFLOW_NAME", "WORKFLOW_RUN_ID"])
+    ano_mes = boto3.client("glue").get_workflow_run_properties(
+        Name=workflow["WORKFLOW_NAME"], RunId=workflow["WORKFLOW_RUN_ID"]
+    )["RunProperties"]["ano_mes"]
 if args["ambiente"] != "sample":
     raise ValueError("--ambiente full ainda não suportado")
 chave = list(dfc.keys())[0]
 tabela = chave.split("_node")[0].split("_", 1)[1]  # silver_empresa_consolidada -> empresa_consolidada
 caminho = f"s3://{args['bucket']}/sample/{tabela}"
 spark = glueContext.spark_session
-novo = dfc.select(chave).toDF().withColumn("ano_mes_alteracao", F.lit(args["ano_mes"]))
-spark.conf.set("spark.databricks.delta.commitInfo.userMetadata", args["ano_mes"])
+novo = dfc.select(chave).toDF().withColumn("ano_mes_alteracao", F.lit(ano_mes))
+spark.conf.set("spark.databricks.delta.commitInfo.userMetadata", ano_mes)
 try:
     spark.sql(f"DESCRIBE HISTORY delta.`{caminho}` LIMIT 1")
     existe = True
@@ -53,5 +62,5 @@ if metricas["operation"] == "MERGE":
 else:
     linhas = int(m["numOutputRows"])
 segundos = int(time.time() - spark.sparkContext.startTime / 1000)
-print(f"resumo job={args['JOB_NAME']} segundos={segundos} linhas={linhas} meses={args['ano_mes']} tabela={tabela}")
+print(f"resumo job={args['JOB_NAME']} segundos={segundos} linhas={linhas} meses={ano_mes} tabela={tabela}")
 return dfc

@@ -138,6 +138,25 @@ def ingerir_mes(ano_mes, s3, bucket, prefixo="", base_url=BASE_URL, tabelas=None
     return len(arquivos)
 
 
+def propriedades_do_workflow(argv, glue=None):
+    """Propriedades da execução do Glue Workflow (ano_mes, ingestao), ou {} fora dele: dentro de um Workflow
+    o Glue passa --WORKFLOW_NAME e --WORKFLOW_RUN_ID ao job."""
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--WORKFLOW_NAME")
+    parser.add_argument("--WORKFLOW_RUN_ID")
+    args, _ = parser.parse_known_args(argv)
+    if not args.WORKFLOW_RUN_ID:
+        return {}
+    if glue is None:
+        import boto3
+
+        glue = boto3.client("glue")
+    resposta = glue.get_workflow_run_properties(Name=args.WORKFLOW_NAME, RunId=args.WORKFLOW_RUN_ID)
+    return resposta["RunProperties"]
+
+
 def main(argv=None):
     import argparse
     import os
@@ -146,19 +165,25 @@ def main(argv=None):
     import boto3
 
     parser = argparse.ArgumentParser(description="Ingere um mês da Receita (CNPJ) no bucket raw.")
-    parser.add_argument("--ano_mes", required=True, help="AAAA-MM")
+    parser.add_argument("--ano_mes", help="AAAA-MM; dentro do Workflow vem das propriedades da execução")
     parser.add_argument("--bucket", required=True)
     parser.add_argument("--prefixo", default="")
     parser.add_argument("--tabelas", default="", help="lista separada por vírgula; vazio = todas")
     args, _ = parser.parse_known_args(argv)  # o Glue injeta argumentos próprios
+    workflow = propriedades_do_workflow(argv)
+    ano_mes = args.ano_mes or workflow["ano_mes"]
+    # ingestao=nao: o Workflow roda sobre o que já está no raw (ex.: a amostra), sem baixar o mês.
+    if workflow.get("ingestao") == "nao":
+        print(f"resumo job=ingest_receita segundos=0 linhas=0 meses={ano_mes}")
+        return
 
     # S3_ENDPOINT aponta para o MinIO local; na AWS fica vazio e o boto3 usa o S3.
     s3 = boto3.client("s3", endpoint_url=os.environ.get("S3_ENDPOINT") or None)
     tabelas = [t for t in args.tabelas.split(",") if t]
     inicio = time.time()
-    arquivos = ingerir_mes(args.ano_mes, s3, args.bucket, args.prefixo, tabelas=tabelas)
+    arquivos = ingerir_mes(ano_mes, s3, args.bucket, args.prefixo, tabelas=tabelas)
     # Linha lida pelo dashboard do CloudWatch (duração por execução).
-    print(f"resumo job=ingest_receita segundos={int(time.time() - inicio)} arquivos={arquivos} meses={args.ano_mes}")
+    print(f"resumo job=ingest_receita segundos={int(time.time() - inicio)} linhas={arquivos} meses={ano_mes}")
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ TABELAS ?=
 # Variáveis do .env (credenciais do MinIO, endpoint S3). Crie com: cp .env.example .env
 PY := uv run --env-file .env python
 
-.PHONY: setup up down test test-spark lint ingest ingest-ibge amostra amostra-aws pipeline dashboard-load deploy-jobs
+.PHONY: setup up down test test-spark lint ingest ingest-ibge amostra amostra-aws pipeline dashboard-load deploy-jobs workflow
 
 setup:  ## cria o .venv e instala as dependências travadas no uv.lock
 	uv sync
@@ -47,3 +47,7 @@ dashboard-load:  ## carrega o mês da Gold no Postgres e atualiza as visões do 
 
 deploy-jobs:  ## publica os jobs visuais de glue/jobs/ na AWS (perfil default; sem o .env, que é do MinIO)
 	uv run python scripts/deploy_jobs.py
+
+INGESTAO ?= nao
+workflow:  ## dispara o Glue Workflow na AWS para o mês (INGESTAO=sim baixa o mês da Receita antes)
+	aws glue start-workflow-run --name goodlion --run-properties ano_mes=$(ANO_MES),ingestao=$(INGESTAO)
