@@ -6,7 +6,7 @@ Pastas, nomes e padrões: [ARQUITETURA](../ARQUITETURA.md).
 
 **Bloqueado por:** 08
 
-**Status:** in-progress (conferido localmente; falta rodar na AWS e o gráfico no Metabase)
+**Status:** in-progress (CDC conferido na AWS, inclusive a repetição; falta o gráfico no Metabase)
 
 - [x] `silver_empresa_consolidada` com Change Data Feed ligado
 - [x] `MERGE` mensal no Custom Transform `jobs/custom/merge_consolidada.py`: insere novos, atualiza alterados e remove os que deixaram de existir (`whenNotMatchedBySource`)
@@ -51,3 +51,8 @@ O MERGE de 2026-10 mexeu em 6.605 linhas da consolidada (2.390 inseridas, 4.142 
 
 **Falta:** rodar na AWS (2026-09 e depois 2026-10, nessa ordem) e montar o gráfico de aberturas e fechamentos no Metabase.
 
+## Na AWS (04/11/2026, amostra)
+
+`silver_empresa_consolidada` em 2026-09 (carga inicial) e 2026-10 (`MERGE`) e `gold_fato_movimentacao_empresa` nos dois meses. Eventos de 2026-10 no Athena: 2.308 aberturas (1.755 de MEI), 1.016 baixas, 67 mudanças de porte, 1 entrada e 895 saídas do MEI. São exatamente as somas das três UFs na amostra local. **Idempotência na AWS:** repetir o `MERGE` e a fato de 2026-10 deu as mesmas contagens, um CNPJ por evento, sem duplicar.
+
+Falta: o gráfico no Metabase.

@@ -6,18 +6,18 @@ As regras ficam em `jobs/quality/<nome do job>.dqdl` (ex.: `jobs/quality/silver_
 
 **Bloqueado por:** 08
 
-**Status:** in-progress (regras e nós prontos; a prova é na AWS)
+**Status:** done
 
-- [ ] Bloqueante: `cnpj_basico` com 8 dígitos e sem nulos
-- [ ] Bloqueante: `cnpj_basico` único por `ano_mes` na fato
-- [ ] Bloqueante: `porte` ∈ {00, 01, 03, 05}
-- [ ] Bloqueante: `capital_social` ≥ 0
-- [ ] Alerta: variação de linhas do mês de no máximo ±5% em relação ao mês anterior
-- [ ] Alerta: `data_inicio_atividade` não futura
-- [ ] Alerta: percentual de e-mails nulos
+- [x] Bloqueante: `cnpj_basico` com 8 dígitos e sem nulos
+- [x] Bloqueante: `cnpj_basico` único por `ano_mes` na fato
+- [x] Bloqueante: `porte` ∈ {00, 01, 03, 05}
+- [x] Bloqueante: `capital_social` ≥ 0
+- [x] Alerta: variação de linhas do mês de no máximo ±5% em relação ao mês anterior
+- [x] Alerta: `data_inicio_atividade` não futura
+- [x] Alerta: percentual de e-mails nulos
 - [x] O `scripts/deploy_jobs.py` injeta o `.dqdl` no nó Evaluate Data Quality de cada job
-- [ ] Teste: injetar uma linha inválida na amostra faz o job falhar; remover a linha faz o job passar
-- [ ] Resultados de DQ gravados no `artifacts`, com prints em `docs/evidencias/`
+- [x] Teste: injetar uma linha inválida na amostra faz o job falhar; remover a linha faz o job passar
+- [x] Resultados de DQ gravados no `artifacts`, com prints em `docs/evidencias/`
 
 ## Andamento (03/11/2026)
 
@@ -37,4 +37,8 @@ As regras ficam em `jobs/quality/<nome do job>.dqdl` (ex.: `jobs/quality/silver_
 **Ainda não validado:** a sintaxe das regras dinâmicas (`avg(last(1))`) e do `now()` só é conferida pelo Glue na primeira execução. Na primeira execução não há mês anterior no histórico.
 
 **Falta na AWS:** `make deploy-jobs`; rodar as Silver da amostra (2026-09 e depois 2026-10, para o alerta de variação ter histórico); injetar uma linha com `cnpj_basico` de 7 dígitos no raw da amostra e ver o job falhar (e o e-mail do ticket 06 chegar); remover a linha e ver passar; prints em `docs/evidencias/`.
+
+## Na AWS (04/11/2026)
+
+Todas as regras passaram na amostra, inclusive as dinâmicas (`avg(last(1))`) e o `now()`. Prova da regra bloqueante: regra mais rígida publicada temporariamente → job falhou sem gravar; regra correta → a nova tentativa passou. Detalhes e por que não foi uma linha injetada no raw: `docs/evidencias/11-data-quality.md`.
 

@@ -14,7 +14,7 @@ Pastas, nomes e padrões: [ARQUITETURA](../ARQUITETURA.md).
 
 **Bloqueado por:** 02, 04, 07
 
-**Status:** in-progress (pronto e conferido localmente; falta rodar na AWS, registrar no Athena e montar os gráficos no Metabase)
+**Status:** in-progress (Gold na AWS igual à local; faltam dim_municipio na AWS e os gráficos no Metabase)
 
 - [x] Jobs visuais da Bronze de Empresas e Simples, seguindo o padrão do ticket 04 (Bookmarks, parâmetros, JSON em `glue/jobs/` com o SQL de `jobs/sql/bronze/` injetado pelo deploy)
 - [x] Jobs visuais da Silver de Empresas, Estabelecimentos e Simples, limitados por `--ano_mes`, com SQL em `jobs/sql/silver/` (a de Estabelecimentos já existe desde o ticket 02)
@@ -22,7 +22,7 @@ Pastas, nomes e padrões: [ARQUITETURA](../ARQUITETURA.md).
 - [x] `fato_empresa_mensal` com grão 1 empresa ativa × `ano_mes`, `cnpj_basico` como dimensão degenerada, medidas `capital_social` e `qtd_estabelecimentos`
 - [x] Testes locais com pytest (via `jobs/local.py`) para a regra de categoria (incluindo MEI com data de exclusão e MEI com porte 01)
 - [x] Reprocessar o mesmo `ano_mes` dá o mesmo resultado
-- [ ] Crawler ou registro manual deixa a fato e as dimensões consultáveis no Athena
+- [x] Crawler ou registro manual deixa a fato e as dimensões consultáveis no Athena
 - [x] Visões materializadas por município, UF e região no Postgres (`dashboard/schema.sql`)
 - [ ] Gráficos no Metabase com contagem e proporção por categoria nos três níveis
 - [x] A Gold provisória `ativas_por_uf` do ticket 02 sai de cena: SQL, job no `jobs/local.py`, tabela e visão no `dashboard/schema.sql` e testes removidos (a contagem de ativas passa a vir da `fato_empresa_mensal`)
@@ -49,3 +49,14 @@ Pastas, nomes e padrões: [ARQUITETURA](../ARQUITETURA.md).
 1. Na AWS: `make deploy-jobs`, rodar Bronze → Silver → Gold na amostra e registrar a fato e as dimensões no Athena (ou esperar o crawler do ticket 14).
 2. Metabase: gráficos de contagem e proporção nas três visões (é preciso entrar no Metabase com o seu usuário).
 
+## Na AWS (04/11/2026, amostra)
+
+Rodaram com sucesso: `bronze_empresas`, `bronze_simples`, `bronze_dominios`, `silver_{estabelecimentos,empresas,simples}` (2026-09 e 2026-10), `gold_dimensoes` e `gold_fato_empresa_mensal` (os dois meses). As tabelas foram registradas à mão no Athena (`CREATE EXTERNAL TABLE ... TBLPROPERTIES ('table_type'='DELTA')`) até os crawlers do ticket 14 existirem.
+
+| Conferência no Athena | Resultado |
+|---|---|
+| Bronze × raw (Empresas, Simples) | iguais nos dois meses (455.563 / 457.904 e 296.481 / 298.700) |
+| Ativas na Silver | 145.721 e 145.932, iguais ao ticket 02 |
+| `fato_empresa_mensal` 2026-09 por categoria | MEI 64.717, ME 54.140, EPP 10.622, Demais 16.242: iguais à amostra local |
+
+Falta: `dim_municipio` na AWS (depende do `terraform apply`, ticket 07) e os gráficos no Metabase.

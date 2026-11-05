@@ -4,11 +4,11 @@
 
 **Bloqueado por:** 08
 
-**Status:** in-progress (job e medição local prontos; falta a medição no Athena)
+**Status:** done
 
 - [x] Job de manutenção com o Custom Transform `jobs/custom/manutencao.py`, rodando `OPTIMIZE` e `VACUUM` nas tabelas Bronze, Silver e Gold
 - [x] Medição "antes" na amostra sem tratamento: quantidade de arquivos por partição e tamanho médio
-- [ ] Consulta de referência no Athena com volume lido e tempo registrados antes e depois
+- [x] Consulta de referência no Athena com volume lido e tempo registrados antes e depois
 - [x] Medição "depois" com os mesmos indicadores
 - [x] Tabela comparativa antes/depois salva em `docs/evidencias/`
 - [x] Após o `VACUUM`, a tabela continua íntegra e consultável
@@ -21,3 +21,6 @@
 
 **Falta na AWS:** rodar a consulta de referência no Athena antes e depois do job `manutencao` e anotar volume lido e tempo.
 
+## Na AWS (04/11/2026)
+
+Job `manutencao` rodou nas 19 tabelas Delta: todas com 1 arquivo por partição depois (a fato e a consolidada vinham de 4). A consulta de referência no Athena lê os mesmos 0,24 MB e leva o mesmo tempo antes e depois: na amostra, com 2 workers, o Glue já grava poucos arquivos. O job custou 742 s (~US$ 0,12). Detalhes em `docs/evidencias/13-arquivos-pequenos.md`.

@@ -20,9 +20,27 @@ Consulta de referência (contagem e mediana do capital por categoria na `fato_em
 
 **Integridade:** depois do `VACUUM` (7 dias, então nada foi apagado ainda: todos os arquivos têm menos de 7 dias) as tabelas continuam legíveis, e a consulta acima roda sobre elas. O teste `tests/test_manutencao.py` confere a contagem de linhas depois da compactação.
 
-## Na AWS (pendente)
+## Na AWS (04/11/2026, amostra)
 
-Antes e depois da manutenção, no workgroup `goodlion`:
+Arquivos ativos por partição (`count(DISTINCT "$path")` no Athena) antes e depois do job `manutencao`:
+
+| Tabela | Antes | Depois |
+|---|---:|---:|
+| `bronze.estabelecimentos` (por mês) | 2 | 1 |
+| `silver.estabelecimentos` (por mês) | 2 | 1 |
+| `silver.empresa_consolidada` | 4 | 1 |
+| `gold.fato_empresa_mensal` (por mês) | 4 | 1 |
+| `gold.fato_movimentacao_empresa` (2026-10) | 4 | 1 |
+| `gold.dim_categoria` | 4 | 1 |
+| Empresas, Simples (Bronze e Silver), domínios | 1 | 1 |
+
+Na AWS, com 2 workers, o Glue já grava poucos arquivos (no máximo 4 por partição, contra 20 no Spark local). A consulta de referência abaixo lê os mesmos 0,24 MB antes e depois e leva de 1,3 s a 2,4 s nas duas situações (3 execuções cada): na amostra não há diferença mensurável. O ganho aparece com a base completa e com reprocessamentos, que acumulam arquivos (cada `replaceWhere` e cada `MERGE` gera arquivos novos).
+
+**Custo do job:** 742 s, 1.485 DPU-s (~US$ 0,12) para 19 tabelas, uma após a outra. Na base completa, vale limitar o `OPTIMIZE` às partições do mês processado.
+
+**Integridade:** depois do `VACUUM`, as contagens da fato e da Silver no Athena continuam as mesmas.
+
+Consulta de referência, no workgroup `goodlion`:
 
 ```sql
 SELECT id_categoria, count(*) AS empresas, approx_percentile(capital_social, 0.5) AS mediana
@@ -31,4 +49,3 @@ WHERE ano_mes = '2026-10'
 GROUP BY 1;
 ```
 
-Anotar "Data scanned" e "Run time" do console nas duas execuções.
