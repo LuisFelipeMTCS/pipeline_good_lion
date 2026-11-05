@@ -147,3 +147,16 @@ def test_bronze_mascara_email_e_cpf_que_escapam_do_detector(spark, tmp_path):
     linhas = sorted((r["cnpj_basico"], r["email"], r["nome_fantasia"]) for r in _bronze(spark, tmp_path).collect())
     assert linhas == [("00000001", "*****", "JOSE DA SILVA*****"), ("00000002", None, "PADARIA 2 IRMAOS")]
 
+
+def test_bronze_mascara_telefone_e_fax_e_mantem_o_ddd(spark, tmp_path):
+    _gravar_raw(tmp_path / "raw", [
+        _estab("00000001", "AC", ddd_1="68", telefone_1="32241234", ddd_fax="68", fax="32245678"),
+        _estab("00000002", "AC"),
+    ])
+
+    local.bronze_estabelecimentos(spark, str(tmp_path / "raw"), str(tmp_path / "bronze"), ANO_MES)
+
+    linhas = sorted((r["cnpj_basico"], r["ddd_1"], r["telefone_1"], r["ddd_fax"], r["fax"], r["telefone_2"])
+                    for r in _bronze(spark, tmp_path).collect())
+    assert linhas == [("00000001", "68", "*****", "68", "*****", None), ("00000002", None, None, None, None, None)]
+

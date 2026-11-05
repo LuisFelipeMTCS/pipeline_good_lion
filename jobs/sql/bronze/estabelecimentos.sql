@@ -6,6 +6,8 @@
 -- Sensitive Data); a coluna DetectedEntities que ele acrescenta fica de fora porque as colunas são explícitas.
 -- Rede de segurança para o que o detector não reconhece (medido na AWS, 04/11: ~50 e-mails malformados e
 -- 2 CPFs colados ao texto por mês): e-mail que ainda tem @ e 11+ dígitos seguidos no nome fantasia viram *****.
+-- Telefone e fax também (PRD, 5.7): o tipo de telefone do detector só reconhece EUA e Canadá, então o número
+-- vira ***** aqui; o DDD fica, porque indica a região e não identifica a pessoa.
 SELECT
     cnpj_basico,
     cnpj_ordem,
@@ -23,11 +25,11 @@ SELECT
     sigla_uf,
     id_municipio_rf,
     ddd_1,
-    telefone_1,
+    CASE WHEN telefone_1 <> '' THEN '*****' END AS telefone_1,
     ddd_2,
-    telefone_2,
+    CASE WHEN telefone_2 <> '' THEN '*****' END AS telefone_2,
     ddd_fax,
-    fax,
+    CASE WHEN fax <> '' THEN '*****' END AS fax,
     CASE WHEN email LIKE '%@%' THEN '*****' ELSE email END AS email,
     situacao_especial,
     to_date(data_situacao_especial, 'yyyyMMdd') AS data_situacao_especial,

@@ -9,7 +9,7 @@ O descarte é regra de negócio e fica no SQL da Bronze (`jobs/sql/bronze/`), te
 **Status:** in-progress (SQL e nó prontos; falta rodar na AWS e decidir o mascaramento do telefone)
 
 - [ ] Nó Detect Sensitive Data nos jobs Bronze que têm colunas de texto candidatas, restrito a essas colunas, e versionado no JSON do job em `glue/jobs/`
-- [ ] E-mail, telefone/fax e CPF mascarados (e-mail e CPF: feito; telefone/fax: decisão pendente)
+- [x] E-mail, telefone/fax e CPF mascarados
 - [x] Logradouro, número, complemento, bairro, CEP e razão social descartados no SQL da Bronze (`jobs/sql/bronze/`), com teste local com pytest
 - [x] Consulta de verificação no Athena: nenhum padrão de CPF ou e-mail encontrado em nenhuma tabela Bronze da amostra (print em `docs/evidencias/`)
 - [x] Tempo e custo do nó medidos na amostra, com estimativa para a base completa
@@ -32,4 +32,8 @@ O descarte é regra de negócio e fica no SQL da Bronze (`jobs/sql/bronze/`), te
 ## Na AWS (04/11/2026)
 
 Verificação no Athena: 0 e-mails e 0 CPFs nos dois meses da Bronze da amostra, nenhuma linha com endereço (`docs/evidencias/10-pii.md`). O nó acrescenta ~107 s (~US$ 0,017) na amostra; na base completa a estimativa é ~US$ 2,40, a decidir antes do ticket 17. Falta: decisão do telefone/fax, print do Athena e o nó na Bronze de Empresas (não precisa: depois da minimização não sobra coluna de texto candidata).
+
+## Telefone e fax (05/11/2026)
+
+Decisão: seguir o PRD (mascarar). Como o tipo de telefone do Detect Sensitive Data só reconhece EUA e Canadá, o número vira `*****` no SQL da Bronze e o DDD fica (indica a região, não a pessoa). Teste: `test_bronze_mascara_telefone_e_fax_e_mantem_o_ddd`. Na AWS, a Bronze é regravada com o Bookmark zerado antes da execução de idempotência do Workflow (ticket 16).
 
