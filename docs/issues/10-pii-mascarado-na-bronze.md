@@ -9,10 +9,10 @@ O descarte é regra de negócio e fica no SQL da Bronze (`jobs/sql/bronze/`), te
 **Status:** in-progress (SQL e nó prontos; falta rodar na AWS e decidir o mascaramento do telefone)
 
 - [ ] Nó Detect Sensitive Data nos jobs Bronze que têm colunas de texto candidatas, restrito a essas colunas, e versionado no JSON do job em `glue/jobs/`
-- [ ] E-mail, telefone/fax e CPF mascarados
+- [ ] E-mail, telefone/fax e CPF mascarados (e-mail e CPF: feito; telefone/fax: decisão pendente)
 - [x] Logradouro, número, complemento, bairro, CEP e razão social descartados no SQL da Bronze (`jobs/sql/bronze/`), com teste local com pytest
-- [ ] Consulta de verificação no Athena: nenhum padrão de CPF ou e-mail encontrado em nenhuma tabela Bronze da amostra (print em `docs/evidencias/`)
-- [ ] Tempo e custo do nó medidos na amostra, com estimativa para a base completa
+- [x] Consulta de verificação no Athena: nenhum padrão de CPF ou e-mail encontrado em nenhuma tabela Bronze da amostra (print em `docs/evidencias/`)
+- [x] Tempo e custo do nó medidos na amostra, com estimativa para a base completa
 - [ ] Se a Bronze de Empresas e Simples (ticket 08) já existir, ela também recebe o nó
 
 ## Andamento (03/11/2026)
@@ -28,4 +28,8 @@ O descarte é regra de negócio e fica no SQL da Bronze (`jobs/sql/bronze/`), te
 1. `make deploy-jobs`.
 2. Apagar `bronze/sample/estabelecimentos/` e zerar o Bookmark (`aws glue reset-job-bookmark --job-name bronze_estabelecimentos`): os meses já gravados ainda têm endereço e e-mail.
 3. Rodar o job, a consulta de verificação no Athena e medir tempo e DPU contra os 205 s do ticket 04.
+
+## Na AWS (04/11/2026)
+
+Verificação no Athena: 0 e-mails e 0 CPFs nos dois meses da Bronze da amostra, nenhuma linha com endereço (`docs/evidencias/10-pii.md`). O nó acrescenta ~107 s (~US$ 0,017) na amostra; na base completa a estimativa é ~US$ 2,40, a decidir antes do ticket 17. Falta: decisão do telefone/fax, print do Athena e o nó na Bronze de Empresas (não precisa: depois da minimização não sobra coluna de texto candidata).
 
