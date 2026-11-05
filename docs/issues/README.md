@@ -15,8 +15,6 @@ Tickets em fatias verticais (tracer bullets) gerados a partir do [PRD](../PRD.md
 
 ### Em andamento
 - [16 — Workflow ponta a ponta](16-workflow-ponta-a-ponta.md) (no Terraform; falta rodar e as provas na AWS)
-- [15 — Perfilamento DataBrew da silver_estabelecimentos](15-perfilamento-databrew.md) (no Terraform; falta rodar na AWS)
-- [14 — Catálogo da Silver/Gold e evolução de esquema](14-catalogo-e-evolucao-de-esquema.md) (crawlers no Terraform; falta rodar na AWS)
 - [12 — Pergunta 3: aberturas e fechamentos via CDC](12-pergunta-3-cdc-movimentacao.md) (conferido localmente; falta AWS e o gráfico no Metabase)
 - [09 — Pergunta 2: capital social por região](09-pergunta-2-capital-social.md) (visões conferidas; faltam os gráficos no Metabase)
 - [08 — Pergunta 1: MEI/ME/EPP/Demais por região](08-pergunta-1-categorias-por-regiao.md) (conferido localmente; falta AWS e gráficos no Metabase)
@@ -25,6 +23,8 @@ Tickets em fatias verticais (tracer bullets) gerados a partir do [PRD](../PRD.md
 - [02 — Tracer local: empresas ativas por UF no Metabase](02-tracer-local-ativas-por-uf.md) (falta o gráfico no Metabase)
 
 ### Concluído
+- [15 — Perfilamento DataBrew da silver_estabelecimentos](15-perfilamento-databrew.md)
+- [14 — Catálogo da Silver/Gold e evolução de esquema](14-catalogo-e-evolucao-de-esquema.md)
 - [07 — Municípios Receita × IBGE → dim_municipio](07-municipios-receita-ibge.md)
 - [13 — Arquivos pequenos: OPTIMIZE/VACUUM com evidência](13-arquivos-pequenos-optimize-vacuum.md)
 - [11 — Data Quality na Silver](11-data-quality-silver.md)

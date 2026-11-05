@@ -115,10 +115,17 @@ resource "aws_cloudformation_stack" "databrew" {
         Properties = {
           Name   = "${var.prefixo}-silver-estabelecimentos"
           Format = "PARQUET"
+          # Só as pastas de partição: a raiz da tabela tem o _delta_log, que o DataBrew tentava ler como Parquet.
           Input = { S3InputDefinition = {
             Bucket = aws_s3_bucket.camada["silver"].bucket
-            Key    = "sample/estabelecimentos/"
+            Key    = "sample/estabelecimentos/ano_mes={ano_mes}/"
           } }
+          PathOptions = {
+            Parameters = [{
+              PathParameterName = "ano_mes"
+              DatasetParameter  = { Name = "ano_mes", Type = "String", CreateColumn = true }
+            }]
+          }
         }
       }
       JobPerfil = {

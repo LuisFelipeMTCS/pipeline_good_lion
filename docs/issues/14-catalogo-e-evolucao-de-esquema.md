@@ -4,13 +4,13 @@
 
 **Bloqueado por:** 08
 
-**Status:** in-progress (crawlers no Terraform; falta aplicar, rodar e o teste de evolução)
+**Status:** done
 
-- [ ] Crawler único para Silver e Gold criado pelo Terraform (`infra/crawlers.tf`), gravando nos bancos `goodlion_silver` e `goodlion_gold`
-- [ ] Todas as tabelas Silver e Gold aparecem no Catalog e respondem no Athena
-- [ ] Teste controlado: adicionar uma coluna numa tabela, rodar o crawler e ver a nova versão no histórico do Catalog
-- [ ] Evidência (histórico de versões) registrada em `docs/evidencias/`
-- [ ] Teste controlado revertido depois de registrado
+- [x] Crawler único para Silver e Gold criado pelo Terraform (`infra/crawlers.tf`), gravando nos bancos `goodlion_silver` e `goodlion_gold`
+- [x] Todas as tabelas Silver e Gold aparecem no Catalog e respondem no Athena
+- [x] Teste controlado: adicionar uma coluna numa tabela, rodar o crawler e ver a nova versão no histórico do Catalog
+- [x] Evidência (histórico de versões) registrada em `docs/evidencias/`
+- [x] Teste controlado revertido depois de registrado
 
 ## Andamento (03/11/2026)
 
@@ -21,3 +21,6 @@
 2. Teste de evolução de esquema: acrescentar uma coluna numa tabela pequena (ex.: `ALTER TABLE delta.\`s3://goodlion-gold-<conta>/sample/dim_categoria\` ADD COLUMNS (descricao string)` num job ou no Athena), rodar o `goodlion-gold`, ver a versão nova em `aws glue get-table-versions --database-name goodlion_gold --table-name dim_categoria` e registrar em `docs/evidencias/`.
 3. Reverter: regravar a `dim_categoria` com o `gold_dimensoes` (o `overwriteSchema` tira a coluna) e rodar o crawler de novo.
 
+## Na AWS (05/11/2026)
+
+Crawlers rodando e tabelas no Athena; versão nova da `dim_categoria` com a coluna `descricao` e reversão: `docs/evidencias/14-catalogo-evolucao.md`. Ficaram dois crawlers (um por camada); a decisão de juntar num só continua em aberto.
