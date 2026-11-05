@@ -14,7 +14,7 @@ Pastas, nomes e padrões: [ARQUITETURA](../ARQUITETURA.md).
 
 **Bloqueado por:** 02, 04, 07
 
-**Status:** in-progress (Gold na AWS igual à local; faltam dim_municipio na AWS e os gráficos no Metabase)
+**Status:** done
 
 - [x] Jobs visuais da Bronze de Empresas e Simples, seguindo o padrão do ticket 04 (Bookmarks, parâmetros, JSON em `glue/jobs/` com o SQL de `jobs/sql/bronze/` injetado pelo deploy)
 - [x] Jobs visuais da Silver de Empresas, Estabelecimentos e Simples, limitados por `--ano_mes`, com SQL em `jobs/sql/silver/` (a de Estabelecimentos já existe desde o ticket 02)
@@ -24,7 +24,7 @@ Pastas, nomes e padrões: [ARQUITETURA](../ARQUITETURA.md).
 - [x] Reprocessar o mesmo `ano_mes` dá o mesmo resultado
 - [x] Crawler ou registro manual deixa a fato e as dimensões consultáveis no Athena
 - [x] Visões materializadas por município, UF e região no Postgres (`dashboard/schema.sql`)
-- [ ] Gráficos no Metabase com contagem e proporção por categoria nos três níveis
+- [x] Gráficos no Metabase com contagem e proporção por categoria nos três níveis
 - [x] A Gold provisória `ativas_por_uf` do ticket 02 sai de cena: SQL, job no `jobs/local.py`, tabela e visão no `dashboard/schema.sql` e testes removidos (a contagem de ativas passa a vir da `fato_empresa_mensal`)
 
 ## Andamento (03/11/2026)
@@ -60,3 +60,7 @@ Rodaram com sucesso: `bronze_empresas`, `bronze_simples`, `bronze_dominios`, `si
 | `fato_empresa_mensal` 2026-09 por categoria | MEI 64.717, ME 54.140, EPP 10.622, Demais 16.242: iguais à amostra local |
 
 Falta: `dim_municipio` na AWS (depende do `terraform apply`, ticket 07) e os gráficos no Metabase.
+
+## Metabase (05/11/2026)
+
+Painel "Empresas no Brasil: categorias, capital social e movimentação" (coleção Good Lion, http://localhost:3001/dashboard/2), montado por `scripts/metabase.py` (pode rodar de novo; usa `METABASE_API_KEY` do `.env`). Cada pergunta mostra o mês mais recente carregado no Postgres. Hoje os dados são a amostra (AC, AP, RR); o Brasil inteiro chega com o ticket 17.

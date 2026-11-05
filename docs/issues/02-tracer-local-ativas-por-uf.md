@@ -4,7 +4,7 @@
 
 **Bloqueado por:** 01
 
-**Status:** in-progress (falta o gráfico no Metabase)
+**Status:** done
 
 - [x] Bronze de Estabelecimentos em Delta, tipada, particionada por `ano_mes`, com sobrescrita por `replaceWhere`
 - [x] Silver de Estabelecimentos com a regra de empresa ativa (`situacao_cadastral = 02` na matriz)
@@ -12,7 +12,7 @@
 - [x] As consultas SQL de cada camada ficam em `jobs/sql/<camada>/<tabela>.sql`, as mesmas que o `deploy_jobs.py` vai injetar nos nós SQL Query (ticket 04)
 - [x] `make dashboard-load ANO_MES=2026-09` lê a Gold com `deltalake`, apaga e reinsere o mês no Postgres e atualiza a visão materializada
 - [x] Rodar a carga duas vezes dá o mesmo resultado (idempotência)
-- [ ] Gráfico "empresas ativas por UF" no Metabase mostra AC, AP e RR
+- [x] Gráfico "empresas ativas por UF" no Metabase mostra AC, AP e RR
 - [x] Testes com pytest cobrindo a regra de empresa ativa
 
 ## Resultado (28/10/2026)
@@ -38,3 +38,8 @@
 | **Total** | **145.721** | **145.932** |
 
 **Testes:** `make test-spark` (6, Spark no container: regra de ativa, tipagem, `replaceWhere`) e `make test` (3 da carga no Postgres, num banco temporário por teste).
+
+## Fechamento (05/11/2026)
+
+A Gold provisória `ativas_por_uf` saiu no ticket 08; o gráfico de ativas por UF ficou no painel do Metabase como "1. Categorias por UF" (barras empilhadas por categoria; o total de cada barra é o de empresas ativas da UF: AC, AP e RR).
+

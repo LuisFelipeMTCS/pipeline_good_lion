@@ -6,7 +6,7 @@ Pastas, nomes e padrões: [ARQUITETURA](../ARQUITETURA.md).
 
 **Bloqueado por:** 08
 
-**Status:** in-progress (CDC conferido na AWS, inclusive a repetição; falta o gráfico no Metabase)
+**Status:** done
 
 - [x] `silver_empresa_consolidada` com Change Data Feed ligado
 - [x] `MERGE` mensal no Custom Transform `jobs/custom/merge_consolidada.py`: insere novos, atualiza alterados e remove os que deixaram de existir (`whenNotMatchedBySource`)
@@ -14,7 +14,7 @@ Pastas, nomes e padrões: [ARQUITETURA](../ARQUITETURA.md).
 - [x] Testes locais com pytest (via `jobs/local.py`) para a classificação de cada tipo de evento
 - [x] Rodar o `MERGE` do mesmo mês duas vezes não gera eventos duplicados
 - [x] Na amostra, 2026-09 seguido de 2026-10 produz eventos plausíveis (conferir alguns CNPJs à mão)
-- [ ] Visões (`dashboard/schema.sql`) e gráfico no Metabase com aberturas e fechamentos por município, UF e região
+- [x] Visões (`dashboard/schema.sql`) e gráfico no Metabase com aberturas e fechamentos por município, UF e região
 
 ## Andamento (03/11/2026)
 
@@ -56,3 +56,7 @@ O MERGE de 2026-10 mexeu em 6.605 linhas da consolidada (2.390 inseridas, 4.142 
 `silver_empresa_consolidada` em 2026-09 (carga inicial) e 2026-10 (`MERGE`) e `gold_fato_movimentacao_empresa` nos dois meses. Eventos de 2026-10 no Athena: 2.308 aberturas (1.755 de MEI), 1.016 baixas, 67 mudanças de porte, 1 entrada e 895 saídas do MEI. São exatamente as somas das três UFs na amostra local. **Idempotência na AWS:** repetir o `MERGE` e a fato de 2026-10 deu as mesmas contagens, um CNPJ por evento, sem duplicar.
 
 Falta: o gráfico no Metabase.
+
+## Metabase (05/11/2026)
+
+Painel "Empresas no Brasil: categorias, capital social e movimentação" (coleção Good Lion, http://localhost:3001/dashboard/2), montado por `scripts/metabase.py` (pode rodar de novo; usa `METABASE_API_KEY` do `.env`). Cada pergunta mostra o mês mais recente carregado no Postgres. Hoje os dados são a amostra (AC, AP, RR); o Brasil inteiro chega com o ticket 17.

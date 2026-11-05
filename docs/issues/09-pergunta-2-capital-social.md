@@ -4,11 +4,11 @@
 
 **Bloqueado por:** 08
 
-**Status:** in-progress (visões prontas e conferidas; faltam os gráficos e o texto no Metabase)
+**Status:** done
 
 - [x] Visões materializadas com mediana e soma de `capital_social` por município, UF e região, com a mediana já calculada no Postgres (`dashboard/schema.sql`)
-- [ ] Gráficos no Metabase com mediana e soma nos três níveis
-- [ ] Texto explicativo no dashboard: capital social declarado na abertura, não é faturamento nem lucro
+- [x] Gráficos no Metabase com mediana e soma nos três níveis
+- [x] Texto explicativo no dashboard: capital social declarado na abertura, não é faturamento nem lucro
 - [x] Conferência manual da mediana de uma UF da amostra contra uma consulta direta na Gold
 
 ## Andamento (03/11/2026)
@@ -27,3 +27,6 @@
 
 **Falta (Metabase, com o seu usuário):** gráficos de mediana e soma nos três níveis e o texto "Capital social declarado na abertura da empresa. Não é faturamento nem lucro, que a base não tem."
 
+## Metabase (05/11/2026)
+
+Painel "Empresas no Brasil: categorias, capital social e movimentação" (coleção Good Lion, http://localhost:3001/dashboard/2), montado por `scripts/metabase.py` (pode rodar de novo; usa `METABASE_API_KEY` do `.env`). Cada pergunta mostra o mês mais recente carregado no Postgres. Hoje os dados são a amostra (AC, AP, RR); o Brasil inteiro chega com o ticket 17.

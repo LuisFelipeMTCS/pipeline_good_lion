@@ -45,14 +45,15 @@ locals {
   ]
 }
 
-# Gatilho mensal (dia 20, 9h UTC). Desligado de propósito: ligado, ele roda o pipeline todo mês e gasta;
-# ligar com `aws glue start-trigger --name goodlion-mensal` quando for a hora.
+# Gatilho mensal (dia 20, 9h UTC). O Glue aceita um só gatilho inicial por Workflow, e desligado ele também
+# impede o start-workflow-run sob demanda (a execução terminava na hora com 0 ações). Por isso fica ligado:
+# depois da entrega, `aws glue stop-trigger --name goodlion-mensal` evita a execução mensal (~US$ 1).
 resource "aws_glue_trigger" "mensal" {
   name          = "${var.prefixo}-mensal"
   workflow_name = aws_glue_workflow.pipeline.name
   type          = "SCHEDULED"
   schedule      = "cron(0 9 20 * ? *)"
-  enabled       = false
+  enabled       = true
   actions {
     job_name = aws_glue_job.definir_mes.name
   }

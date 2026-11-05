@@ -14,15 +14,15 @@ Tickets em fatias verticais (tracer bullets) gerados a partir do [PRD](../PRD.md
 | 17 | [Rodada final na base completa](17-rodada-final-base-completa.md) | 15, 16 |
 
 ### Em andamento
-- [16 — Workflow ponta a ponta](16-workflow-ponta-a-ponta.md) (no Terraform; falta rodar e as provas na AWS)
-- [12 — Pergunta 3: aberturas e fechamentos via CDC](12-pergunta-3-cdc-movimentacao.md) (conferido localmente; falta AWS e o gráfico no Metabase)
-- [09 — Pergunta 2: capital social por região](09-pergunta-2-capital-social.md) (visões conferidas; faltam os gráficos no Metabase)
-- [08 — Pergunta 1: MEI/ME/EPP/Demais por região](08-pergunta-1-categorias-por-regiao.md) (conferido localmente; falta AWS e gráficos no Metabase)
-- [10 — PII mascarado na Bronze](10-pii-mascarado-na-bronze.md) (falta rodar na AWS e decidir o telefone)
-- [06 — Alertas de falha por e-mail e observabilidade](06-alertas-e-observabilidade.md) (falta confirmar a assinatura do e-mail e repetir a falha forçada)
-- [02 — Tracer local: empresas ativas por UF no Metabase](02-tracer-local-ativas-por-uf.md) (falta o gráfico no Metabase)
+- [16 — Workflow ponta a ponta](16-workflow-ponta-a-ponta.md) (Workflow criado; rodando na amostra)
+- [10 — PII mascarado na Bronze](10-pii-mascarado-na-bronze.md) (conferido na AWS; falta decidir telefone/fax)
+- [06 — Alertas de falha por e-mail e observabilidade](06-alertas-e-observabilidade.md) (falta o print do e-mail da falha forçada)
 
 ### Concluído
+- [02 — Tracer local: empresas ativas por UF no Metabase](02-tracer-local-ativas-por-uf.md)
+- [08 — Pergunta 1: MEI/ME/EPP/Demais por região](08-pergunta-1-categorias-por-regiao.md)
+- [09 — Pergunta 2: capital social por região](09-pergunta-2-capital-social.md)
+- [12 — Pergunta 3: aberturas e fechamentos via CDC](12-pergunta-3-cdc-movimentacao.md)
 - [15 — Perfilamento DataBrew da silver_estabelecimentos](15-perfilamento-databrew.md)
 - [14 — Catálogo da Silver/Gold e evolução de esquema](14-catalogo-e-evolucao-de-esquema.md)
 - [07 — Municípios Receita × IBGE → dim_municipio](07-municipios-receita-ibge.md)
