@@ -39,7 +39,14 @@ Capital social declarado: os MEIs somam R$ 571,7 bilhões em 2026-09, por causa 
 
 ## PII na base completa (Bronze, ~73 milhões de estabelecimentos por mês)
 
-0 e-mails, 0 telefones/fax com dígitos; 51,5 milhões de e-mails mascarados; a Bronze completa nem tem as colunas de endereço. Na 1ª passada sobraram 6 CPFs por mês **com pontuação colados ao texto** (`NOME123.456.789-01`); a regra do SQL passou a cobrir esse formato e a Bronze foi regravada na repetição. **Depois: 0 e-mails, 0 CPFs, 0 telefones** nos 73.366.147 (2026-09) e 73.809.379 (2026-10) estabelecimentos. A Silver de 2026-09 foi refeita à mão com a Bronze nova.
+0 e-mails, 0 telefones/fax com dígitos; 51,5 milhões de e-mails mascarados; a Bronze completa nem tem as colunas de endereço. Na 1ª passada sobraram 6 CPFs por mês **com pontuação colados ao texto** (`NOME123.456.789-01`); a regra do SQL passou a cobrir esse formato e a Bronze foi regravada na repetição. **Depois: 0 e-mails, 0 CPFs, 0 telefones** nos 73.366.147 (2026-09) e 73.809.379 (2026-10) estabelecimentos. A Silver de 2026-09 foi refeita à mão com a Bronze nova (`silver_estabelecimentos --ano_mes 2026-09`, 933 s); conferida no Athena em `goodlion_silver.full_estabelecimentos`:
+
+| Mês | Linhas | E-mails | CPFs | Matrizes ativas |
+|---|---:|---:|---:|---:|
+| 2026-09 | 73.366.147 | 0 | 0 | 26.937.244 |
+| 2026-10 | 73.809.379 | 0 | 0 | 27.049.049 |
+
+A Silver tem uma matriz ativa a mais que a fato: a segunda matriz do CNPJ `08314885`, que a fato descarta de propósito (uma matriz por empresa).
 
 ## Dashboard
 
