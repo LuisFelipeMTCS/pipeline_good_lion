@@ -6,14 +6,14 @@ O descarte é regra de negócio e fica no SQL da Bronze (`jobs/sql/bronze/`), te
 
 **Bloqueado por:** 04
 
-**Status:** in-progress (SQL e nó prontos; falta rodar na AWS e decidir o mascaramento do telefone)
+**Status:** done
 
-- [ ] Nó Detect Sensitive Data nos jobs Bronze que têm colunas de texto candidatas, restrito a essas colunas, e versionado no JSON do job em `glue/jobs/`
+- [x] Nó Detect Sensitive Data nos jobs Bronze que têm colunas de texto candidatas, restrito a essas colunas, e versionado no JSON do job em `glue/jobs/`
 - [x] E-mail, telefone/fax e CPF mascarados
 - [x] Logradouro, número, complemento, bairro, CEP e razão social descartados no SQL da Bronze (`jobs/sql/bronze/`), com teste local com pytest
 - [x] Consulta de verificação no Athena: nenhum padrão de CPF ou e-mail encontrado em nenhuma tabela Bronze da amostra (print em `docs/evidencias/`)
 - [x] Tempo e custo do nó medidos na amostra, com estimativa para a base completa
-- [ ] Se a Bronze de Empresas e Simples (ticket 08) já existir, ela também recebe o nó
+- [x] Se a Bronze de Empresas e Simples (ticket 08) já existir, ela também recebe o nó
 
 ## Andamento (03/11/2026)
 
@@ -37,3 +37,6 @@ Verificação no Athena: 0 e-mails e 0 CPFs nos dois meses da Bronze da amostra,
 
 Decisão: seguir o PRD (mascarar). Como o tipo de telefone do Detect Sensitive Data só reconhece EUA e Canadá, o número vira `*****` no SQL da Bronze e o DDD fica (indica a região, não a pessoa). Teste: `test_bronze_mascara_telefone_e_fax_e_mantem_o_ddd`. Na AWS, a Bronze é regravada com o Bookmark zerado antes da execução de idempotência do Workflow (ticket 16).
 
+## Base completa (05/11/2026)
+
+0 e-mails, 0 CPFs e 0 telefones nos ~147 milhões de estabelecimentos da Bronze completa (depois de cobrir também o CPF com pontuação). Empresas e Simples não recebem o nó: depois da minimização (razão social descartada), não sobra coluna de texto candidata.
