@@ -76,16 +76,27 @@ resource "aws_cloudformation_stack" "databrew" {
           Steps = jsondecode(file("${path.module}/databrew_receita_ibge.json"))
         }
       }
+      # O CloudFormation cria a receita sem publicar, e job com dataset + receita só aceita versão publicada.
+      # Job com projeto usa a receita do projeto como está. Projeto parado não cobra (sessão só se aberto no console).
+      ProjetoIbge = {
+        Type      = "AWS::DataBrew::Project"
+        DependsOn = ["DatasetIbge", "ReceitaIbge"]
+        Properties = {
+          Name        = "${var.prefixo}-limpeza-ibge"
+          DatasetName = "${var.prefixo}-ibge-municipios"
+          RecipeName  = "${var.prefixo}-limpeza-ibge"
+          RoleArn     = aws_iam_role.databrew.arn
+        }
+      }
       JobLimpezaIbge = {
         Type      = "AWS::DataBrew::Job"
-        DependsOn = ["DatasetIbge", "ReceitaIbge"]
+        DependsOn = ["ProjetoIbge"]
         Properties = {
           Name        = local.job_limpeza_ibge
           Type        = "RECIPE"
           RoleArn     = aws_iam_role.databrew.arn
-          DatasetName = "${var.prefixo}-ibge-municipios"
-          Recipe      = { Name = "${var.prefixo}-limpeza-ibge", Version = "LATEST_WORKING" }
-          MaxCapacity = 1
+          ProjectName = "${var.prefixo}-limpeza-ibge"
+          MaxCapacity = 2 # mínimo do DataBrew
           MaxRetries  = 0
           Timeout     = 15 # minutos
           Outputs = [{
@@ -118,7 +129,7 @@ resource "aws_cloudformation_stack" "databrew" {
           Type           = "PROFILE"
           RoleArn        = aws_iam_role.databrew.arn
           DatasetName    = "${var.prefixo}-silver-estabelecimentos"
-          MaxCapacity    = 1
+          MaxCapacity    = 2 # mínimo do DataBrew
           MaxRetries     = 0
           Timeout        = 30 # minutos
           JobSample      = { Mode = "CUSTOM_ROWS", Size = 20000 }

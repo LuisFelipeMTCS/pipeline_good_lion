@@ -45,3 +45,22 @@ def test_grava_o_json_da_api_na_particao_do_mes(s3_raw, ibge_falso):
     assert chaves == [f"{prefixo}ibge_municipios/ano_mes=2026-09/municipios.json"]
     corpo = s3.get_object(Bucket=bucket, Key=chaves[0])["Body"].read().decode("utf-8")
     assert json.loads(corpo) == MUNICIPIOS
+
+
+def test_api_fora_do_ar_reaproveita_o_ultimo_retrato_do_raw(s3_raw):
+    # De dentro da AWS a API do IBGE não respondeu (timeout); a lista de municípios quase nunca muda.
+    s3, bucket, prefixo = s3_raw
+    anterior = json.dumps(MUNICIPIOS).encode("utf-8")
+    s3.put_object(Bucket=bucket, Key=f"{prefixo}ibge_municipios/ano_mes=2026-09/municipios.json", Body=anterior)
+
+    ingerir("2026-10", s3, bucket, prefixo, url="http://127.0.0.1:9/fora-do-ar", tentativas=1)
+
+    corpo = s3.get_object(Bucket=bucket, Key=f"{prefixo}ibge_municipios/ano_mes=2026-10/municipios.json")["Body"]
+    assert json.loads(corpo.read()) == MUNICIPIOS
+
+
+def test_api_fora_do_ar_sem_retrato_anterior_falha(s3_raw):
+    s3, bucket, prefixo = s3_raw
+
+    with pytest.raises(OSError):
+        ingerir("2026-10", s3, bucket, prefixo, url="http://127.0.0.1:9/fora-do-ar", tentativas=1)

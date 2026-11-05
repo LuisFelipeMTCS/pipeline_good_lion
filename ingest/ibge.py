@@ -4,22 +4,52 @@ Compatível com Python 3.9 (job Python shell do Glue): só biblioteca padrão + 
 """
 import gzip
 import json
+import time
 import urllib.request
 
 URL = "https://servicodados.ibge.gov.br/api/v1/localidades/municipios"
-TIMEOUT_SEGUNDOS = 120
+TIMEOUT_SEGUNDOS = 60
 
 
-def ingerir(ano_mes, s3, bucket, prefixo="", url=URL):
+def _baixar(url, tentativas):
+    for tentativa in range(1, tentativas + 1):
+        try:
+            with urllib.request.urlopen(url, timeout=TIMEOUT_SEGUNDOS) as resposta:
+                corpo = resposta.read()
+            # A API responde em gzip mesmo sem Accept-Encoding; o raw guarda o JSON aberto.
+            return gzip.decompress(corpo) if corpo[:2] == b"\x1f\x8b" else corpo
+        except OSError as erro:  # URLError e timeout são OSError
+            print(f"API do IBGE, tentativa {tentativa}: {erro}", flush=True)
+            if tentativa == tentativas:
+                raise
+            time.sleep(10)
+
+
+def _ultimo_retrato(s3, bucket, prefixo):
+    """Corpo do municipios.json mais recente já gravado no raw, ou None."""
+    objetos = []
+    for pagina in s3.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=f"{prefixo}ibge_municipios/"):
+        objetos += [o for o in pagina.get("Contents", []) if o["Key"].endswith("/municipios.json")]
+    if not objetos:
+        return None
+    mais_recente = max(objetos, key=lambda o: o["Key"])
+    print("usando o retrato anterior:", mais_recente["Key"], flush=True)
+    return s3.get_object(Bucket=bucket, Key=mais_recente["Key"])["Body"].read()
+
+
+def ingerir(ano_mes, s3, bucket, prefixo="", url=URL, tentativas=3):
     """Grava o JSON da API em <prefixo>ibge_municipios/ano_mes=<ano_mes>/municipios.json.
 
-    Uma chave fixa por mês: rodar de novo substitui o arquivo.
+    Uma chave fixa por mês: rodar de novo substitui o arquivo. Se a API não responder (de dentro da AWS ela deu
+    timeout), copia o retrato mais recente do raw para o mês: a lista de municípios quase nunca muda, e a cópia
+    renova o arquivo antes da expiração de 30 dias do raw. Sem retrato anterior, a falha segue.
     """
-    with urllib.request.urlopen(url, timeout=TIMEOUT_SEGUNDOS) as resposta:
-        corpo = resposta.read()
-    # A API responde em gzip mesmo sem Accept-Encoding; o raw guarda o JSON aberto.
-    if corpo[:2] == b"\x1f\x8b":
-        corpo = gzip.decompress(corpo)
+    try:
+        corpo = _baixar(url, tentativas)
+    except OSError:
+        corpo = _ultimo_retrato(s3, bucket, prefixo)
+        if corpo is None:
+            raise
     municipios = len(json.loads(corpo))
     chave = f"{prefixo}ibge_municipios/ano_mes={ano_mes}/municipios.json"
     s3.put_object(Bucket=bucket, Key=chave, Body=corpo, ContentType="application/json")

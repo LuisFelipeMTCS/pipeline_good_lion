@@ -22,10 +22,10 @@ Tickets em fatias verticais (tracer bullets) gerados a partir do [PRD](../PRD.md
 - [08 — Pergunta 1: MEI/ME/EPP/Demais por região](08-pergunta-1-categorias-por-regiao.md) (conferido localmente; falta AWS e gráficos no Metabase)
 - [10 — PII mascarado na Bronze](10-pii-mascarado-na-bronze.md) (falta rodar na AWS e decidir o telefone)
 - [06 — Alertas de falha por e-mail e observabilidade](06-alertas-e-observabilidade.md) (falta confirmar a assinatura do e-mail e repetir a falha forçada)
-- [07 — Municípios Receita × IBGE → dim_municipio](07-municipios-receita-ibge.md) (código e testes locais prontos; falta rodar na AWS)
 - [02 — Tracer local: empresas ativas por UF no Metabase](02-tracer-local-ativas-por-uf.md) (falta o gráfico no Metabase)
 
 ### Concluído
+- [07 — Municípios Receita × IBGE → dim_municipio](07-municipios-receita-ibge.md)
 - [13 — Arquivos pequenos: OPTIMIZE/VACUUM com evidência](13-arquivos-pequenos-optimize-vacuum.md)
 - [11 — Data Quality na Silver](11-data-quality-silver.md)
 - [01 — Ambiente local e amostra AC/AP/RR](01-ambiente-local-e-amostra.md)
