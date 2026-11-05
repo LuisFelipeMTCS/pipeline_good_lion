@@ -3,9 +3,10 @@
 
     uv run python scripts/deploy_jobs.py [--ambiente full] [glue/jobs/<job>.json ...]
 
-Os JSON descrevem a amostra. Com --ambiente full (rodada final, ticket 17) os mesmos jobs são publicados para a
-base completa: caminhos sem o prefixo sample/, tabelas full_<tabela> do raw no Catalog, --ambiente full, até 10
-workers (PRD, 5.3) e timeout maior. Para voltar à amostra, publique de novo sem a opção.
+Os JSON descrevem a amostra. Com --ambiente full (rodada final, ticket 17) os mesmos jobs são publicados
+para a base completa: caminhos sem o prefixo sample/, tabelas full_<tabela> do raw no Catalog, --ambiente full,
+até 10 workers (PRD, 5.3), timeout maior e métricas detalhadas do Glue ligadas. Para voltar à amostra, publique
+de novo sem a opção.
 """
 import json
 import sys
@@ -49,6 +50,9 @@ def para_full(job):
     if job["Command"]["Name"] == "glueetl":
         job["NumberOfWorkers"] = WORKERS_FULL.get(job["Name"], 10)
         job["Timeout"] = 180
+        # Métricas detalhadas só na rodada final (PRD, 7.3): são cobradas como métricas do CloudWatch.
+        job["DefaultArguments"]["--enable-metrics"] = "true"
+        job["DefaultArguments"]["--enable-observability-metrics"] = "true"
     return job
 
 

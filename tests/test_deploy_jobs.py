@@ -47,4 +47,5 @@ def test_full_aponta_os_mesmos_jobs_para_a_base_completa():
         "s3://goodlion-bronze-724793286570/empresas/"]
     assert "/sample/" not in json.dumps(silver)
     assert dominios["NumberOfWorkers"] == 2
+    assert bronze["DefaultArguments"]["--enable-observability-metrics"] == "true"
 
