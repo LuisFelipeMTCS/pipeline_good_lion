@@ -36,7 +36,7 @@
       "CustomCode": {
         "Name": "gravar_delta",
         "Inputs": [
-          "node-pii"
+          "node-sql"
         ],
         "Code": "@arquivo:jobs/custom/gravar_delta.py",
         "ClassName": "GravarDelta"
@@ -63,14 +63,14 @@
     },
     "node-sql": {
       "SparkSQL": {
-        "Name": "tipar_estabelecimentos",
+        "Name": "bronze_estabelecimentos",
         "Inputs": [
-          "node-selecionar"
+          "node-pii"
         ],
         "SqlQuery": "@arquivo:jobs/sql/bronze/estabelecimentos.sql",
         "SqlAliases": [
           {
-            "From": "node-selecionar",
+            "From": "node-pii",
             "Alias": "raw_estabelecimentos"
           }
         ]
@@ -78,9 +78,9 @@
     },
     "node-pii": {
       "PIIDetection": {
-        "Name": "bronze_estabelecimentos",
+        "Name": "mascarar_estabelecimentos",
         "Inputs": [
-          "node-sql"
+          "node-selecionar"
         ],
         "PiiType": "RowMasking",
         "EntityTypesToDetect": [

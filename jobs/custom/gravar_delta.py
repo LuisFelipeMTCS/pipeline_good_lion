@@ -17,8 +17,7 @@ if args["ambiente"] != "sample":
 # (bronze_cnaes -> cnaes): é assim que um job só (bronze_dominios) grava várias tabelas.
 chave = list(dfc.keys())[0]
 tabela = chave.split("_node")[0].split("_", 1)[1]
-# O nó Detect Sensitive Data acrescenta DetectedEntities (onde mascarou o quê); fica fora da tabela.
-df = dfc.select(chave).toDF().drop("DetectedEntities")
+df = dfc.select(chave).toDF()
 caminho = f"s3://{args['bucket']}/sample/{tabela}"
 linhas = 0
 meses = []

@@ -2,7 +2,8 @@
 -- Tipagem (SDK da Base dos Dados): datas AAAAMMDD viram DATE ('00000000' e vazio viram nulo);
 -- códigos ficam como texto para não perder os zeros à esquerda.
 -- Minimização (PRD, 5.7): o endereço (tipo de logradouro, logradouro, número, complemento, bairro, CEP)
--- não serve à análise e não passa para a Bronze. E-mail e CPF são mascarados no nó seguinte.
+-- não serve à análise e não passa para a Bronze. E-mail e CPF já vêm mascarados pelo nó anterior (Detect
+-- Sensitive Data); a coluna DetectedEntities que ele acrescenta fica de fora porque as colunas são explícitas.
 SELECT
     cnpj_basico,
     cnpj_ordem,
