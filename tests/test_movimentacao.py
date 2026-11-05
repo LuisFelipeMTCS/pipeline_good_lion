@@ -92,3 +92,13 @@ def test_rodar_o_merge_do_mesmo_mes_de_novo_nao_duplica_eventos(cdc):
     cdc("2026-10", OUTUBRO)
 
     assert cdc("2026-10", OUTUBRO) == EVENTOS_OUTUBRO
+
+
+def test_reprocessar_o_mes_da_carga_inicial_reconstroi_a_consolidada(cdc):
+    # A 1ª carga gravou uma empresa duplicada (como o 08314885 da base completa); um MERGE não desfaria isso.
+    cdc("2026-09", SETEMBRO + [_estado("00000001", mei=True)])
+
+    assert cdc("2026-09", SETEMBRO) == []
+    assert cdc.consolidada() == ["00000001", "00000002", "00000003", "00000004", "00000005", "00000006"]
+    assert cdc("2026-10", OUTUBRO) == EVENTOS_OUTUBRO
+

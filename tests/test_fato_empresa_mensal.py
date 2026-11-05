@@ -127,3 +127,17 @@ def test_dimensoes_fixas_e_do_dominio(spark, tmp_path):
     assert ler("dim_cnae") == [("4711302", "Comércio varejista")]
     assert ler("dim_natureza_juridica") == [("2135", "Empresário (Individual)")]
     assert ler("dim_tempo") == [("2026-09", 2026, 9, 3)]
+
+
+def test_cnpj_repetido_no_arquivo_de_empresas_vira_uma_linha_so(spark, tmp_path):
+    # Como o 08314885 na base completa de 2026-09: uma linha com porte, outra sem.
+    _gravar(tmp_path, "empresas", [{"cnpj_basico": "00000001", "porte": "", "capital_social": "0,00"},
+                                   {"cnpj_basico": "00000001", "porte": "05", "capital_social": "0,00"}])
+    _gravar(tmp_path, "estabelecimentos", [{"cnpj_basico": "00000001", "cnpj_ordem": "0001",
+                                            "identificador_matriz_filial": "1", "situacao_cadastral": "02"}])
+    _gravar(tmp_path, "simples", [])
+
+    assert _categorias(_rodar(spark, tmp_path)) == [("2026-09", "00000001", "DEMAIS")]
+    porte = spark.read.format("delta").load(str(tmp_path / "silver" / "empresas")).collect()
+    assert [r["porte"] for r in porte] == ["05"]
+

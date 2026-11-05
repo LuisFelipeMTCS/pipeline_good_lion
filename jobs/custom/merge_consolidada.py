@@ -28,15 +28,21 @@ spark = glueContext.spark_session
 novo = dfc.select(chave).toDF().withColumn("ano_mes_alteracao", F.lit(ano_mes))
 spark.conf.set("spark.databricks.delta.commitInfo.userMetadata", ano_mes)
 try:
-    spark.sql(f"DESCRIBE HISTORY delta.`{caminho}` LIMIT 1")
-    existe = True
+    historico = spark.sql(f"DESCRIBE HISTORY delta.`{caminho}`")
+    inicial = historico.where("operation = 'WRITE'").orderBy("version").first()
+    mes_inicial = inicial["userMetadata"] if inicial else None
 except AnalysisException:
-    existe = False
+    mes_inicial = None
+    historico = None
 try:
-    if not existe:
+    if historico is None:
         # Carga inicial: é o ponto de partida, não gera eventos.
         novo.write.format("delta").save(caminho)
         spark.sql(f"ALTER TABLE delta.`{caminho}` SET TBLPROPERTIES (delta.enableChangeDataFeed = true)")
+    elif mes_inicial == ano_mes:
+        # Reprocessar o mês da carga inicial a reconstrói: um MERGE não desfaz o que a primeira carga gravou
+        # errado (na base completa, um cnpj_basico duplicado). Continua sem eventos: a Gold só lê versões de MERGE.
+        novo.write.format("delta").mode("overwrite").save(caminho)
     else:
         # Em SQL, não pela API Python do Delta: o módulo `delta` não vem no container local do Glue.
         # Só atualiza a linha se algo mudou: sem isso, todo mês toda a base viraria "mudança" no CDF.
