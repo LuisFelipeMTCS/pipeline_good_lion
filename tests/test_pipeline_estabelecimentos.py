@@ -131,5 +131,19 @@ def test_silver_troca_email_vazio_por_nulo(spark, tmp_path):
     _rodar_pipeline(spark, tmp_path)
 
     linhas = spark.read.format("delta").load(str(tmp_path / "silver" / "estabelecimentos")).collect()
-    assert sorted((r["cnpj_basico"], r["email"]) for r in linhas) == [("00000001", None), ("00000002", "X@Y.COM")]
+    # E-mail preenchido chega mascarado da Bronze; só o vazio vira nulo.
+    assert sorted((r["cnpj_basico"], r["email"]) for r in linhas) == [("00000001", None), ("00000002", "*****")]
+
+
+def test_bronze_mascara_email_e_cpf_que_escapam_do_detector(spark, tmp_path):
+    # Formatos que o Detect Sensitive Data não reconheceu na AWS: ponto antes do @ e CPF colado ao nome.
+    _gravar_raw(tmp_path / "raw", [
+        _estab("00000001", "AC", email="FULANO.@GMAIL.COM", nome_fantasia="JOSE DA SILVA12345678901"),
+        _estab("00000002", "AC", email="", nome_fantasia="PADARIA 2 IRMAOS"),
+    ])
+
+    local.bronze_estabelecimentos(spark, str(tmp_path / "raw"), str(tmp_path / "bronze"), ANO_MES)
+
+    linhas = sorted((r["cnpj_basico"], r["email"], r["nome_fantasia"]) for r in _bronze(spark, tmp_path).collect())
+    assert linhas == [("00000001", "*****", "JOSE DA SILVA*****"), ("00000002", None, "PADARIA 2 IRMAOS")]
 

@@ -4,12 +4,14 @@
 -- Minimização (PRD, 5.7): o endereço (tipo de logradouro, logradouro, número, complemento, bairro, CEP)
 -- não serve à análise e não passa para a Bronze. E-mail e CPF já vêm mascarados pelo nó anterior (Detect
 -- Sensitive Data); a coluna DetectedEntities que ele acrescenta fica de fora porque as colunas são explícitas.
+-- Rede de segurança para o que o detector não reconhece (medido na AWS, 04/11: ~50 e-mails malformados e
+-- 2 CPFs colados ao texto por mês): e-mail que ainda tem @ e 11+ dígitos seguidos no nome fantasia viram *****.
 SELECT
     cnpj_basico,
     cnpj_ordem,
     cnpj_dv,
     CAST(identificador_matriz_filial AS INT) AS identificador_matriz_filial,
-    nome_fantasia,
+    regexp_replace(nome_fantasia, '[0-9]{11,}', '*****') AS nome_fantasia,
     situacao_cadastral,
     to_date(data_situacao_cadastral, 'yyyyMMdd') AS data_situacao_cadastral,
     motivo_situacao_cadastral,
@@ -26,7 +28,7 @@ SELECT
     telefone_2,
     ddd_fax,
     fax,
-    email,
+    CASE WHEN email LIKE '%@%' THEN '*****' ELSE email END AS email,
     situacao_especial,
     to_date(data_situacao_especial, 'yyyyMMdd') AS data_situacao_especial,
     ano_mes
