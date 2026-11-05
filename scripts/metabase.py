@@ -1,8 +1,13 @@
-"""Monta no Metabase local o painel das 3 perguntas de negócio, a partir das visões do dashboard/schema.sql.
+"""Monta no Metabase local o painel das 3 perguntas de negócio, contado como uma história em três atos.
 
     uv run --env-file .env python scripts/metabase.py
 
-Pode rodar de novo: o banco, a coleção, as perguntas e o painel são achados pelo nome e atualizados.
+Cada ato abre com a conclusão já escrita (calculada no Postgres na hora em que o script roda: rode de novo depois
+de cada `make dashboard-load` e os títulos acompanham os dados). Formas e cores seguem uma regra só:
+- categorias (MEI/ME/EPP/Demais) sempre nas mesmas 4 cores, em barras 100% empilhadas com o valor escrito;
+- rankings (capital, municípios) em barras ordenadas de uma cor só; capital social sempre em violeta;
+- aberturas para cima (azul) e baixas para baixo (vermelho), em torno do zero.
+Pode rodar de novo: banco, coleção, perguntas e painel são achados pelo nome; perguntas antigas são arquivadas.
 Usa METABASE_API_KEY (Admin → Authentication → API Keys) e as credenciais do Postgres do .env.
 """
 import json
@@ -10,10 +15,18 @@ import os
 import urllib.error
 import urllib.request
 
+import psycopg
+
 URL = os.environ.get("METABASE_URL", "http://localhost:3001")
 NOME_BANCO = "Dashboard Good Lion"
 NOME_COLECAO = "Good Lion"
 NOME_PAINEL = "Empresas no Brasil: categorias, capital social e movimentação"
+
+# Paleta validada (skill dataviz, validate_palette.js no fundo branco): as 4 categorias passam nas checagens de
+# daltonismo; verde-água e amarelo ficam abaixo de 3:1 de contraste, por isso os gráficos mostram os valores.
+COR_CATEGORIA = {"MEI": "#2a78d6", "ME": "#eb6834", "EPP": "#1baf7a", "Demais": "#eda100"}
+COR_CAPITAL = "#6250d6"
+COR_ABERTURA, COR_BAIXA = "#2a78d6", "#e34948"
 
 
 def api(metodo, caminho, corpo=None):
@@ -62,66 +75,165 @@ def colecao():
     return None
 
 
-def _ultimo_mes(visao):
+# ---------------------------------------------------------------- os fatos que viram títulos
+
+def _br(numero, casas=0):
+    texto = f"{numero:,.{casas}f}"
+    return texto.replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def fatos():
+    conninfo = (f"host={os.environ.get('POSTGRES_HOST', 'localhost')} port=5432 dbname=dashboard "
+                f"user={os.environ['POSTGRES_USER']} password={os.environ['POSTGRES_PASSWORD']}")
+    with psycopg.connect(conninfo) as c:
+        def um(sql, *parametros):
+            return c.execute(sql, parametros).fetchone()
+
+        mes = um("SELECT MAX(ano_mes) FROM fato_empresa_mensal")[0]
+        mediana = "percentile_cont(0.5) WITHIN GROUP (ORDER BY capital_social)"
+        return {
+            "mes": mes,
+            "mais_comum": um("SELECT c.nome, COUNT(*)::numeric / SUM(COUNT(*)) OVER () FROM fato_empresa_mensal f "
+                             "JOIN dim_categoria c USING (id_categoria) WHERE f.ano_mes = %s GROUP BY c.nome "
+                             "ORDER BY 2 DESC LIMIT 1", mes),
+            "mei_uf": um("SELECT sigla_uf, proporcao FROM mv_categorias_uf WHERE ano_mes = %s AND categoria = 'MEI' "
+                         "ORDER BY proporcao DESC LIMIT 1", mes),
+            "capital_uf": um("SELECT sigla_uf, mediana_capital_social FROM mv_capital_uf WHERE ano_mes = %s "
+                             "ORDER BY mediana_capital_social DESC LIMIT 1", mes),
+            "capital_mei": um(f"SELECT {mediana} FROM fato_empresa_mensal WHERE ano_mes = %s "
+                              "AND id_categoria = 'MEI'", mes)[0],
+            "capital_demais": um(f"SELECT {mediana} FROM fato_empresa_mensal WHERE ano_mes = %s "
+                                 "AND id_categoria = 'DEMAIS'", mes)[0],
+            "eventos": um("SELECT COALESCE(SUM(qtd_eventos) FILTER (WHERE tipo_evento = 'abertura'), 0), "
+                          "COALESCE(SUM(qtd_eventos) FILTER (WHERE tipo_evento = 'baixa'), 0), "
+                          "COALESCE(SUM(qtd_eventos) FILTER (WHERE tipo_evento = 'abertura' AND categoria = 'MEI'), 0) "
+                          "FROM mv_movimentacao_uf WHERE ano_mes = %s", mes),
+        }
+
+
+def textos(f):
+    uf, prop = f["mei_uf"]
+    categoria, parte = f["mais_comum"]
+    uf_cap, med_cap = f["capital_uf"]
+    aberturas, baixas, aberturas_mei = f["eventos"]
+    pct_mei_aberturas = aberturas_mei / aberturas if aberturas else 0
+    razao = (f["capital_demais"] / f["capital_mei"]) if f["capital_mei"] else 0
+    sinal = "+" if aberturas >= baixas else ""
+    return {
+        "intro": (f"# Empresas ativas: quem são, quanto declararam de capital e onde abrem e fecham\n"
+                  f"Mês de referência **{f['mes']}**. Empresa ativa = estabelecimento matriz com situação cadastral 02 "
+                  "(Receita Federal, CNPJ). Os indicadores abaixo comparam com o mês anterior."),
+        "ato1": (f"## 1. A categoria mais comum é **{categoria}**: **{_br(parte * 100, 1)}%** das empresas ativas\n"
+                 f"O MEI pesa mais em **{uf}**, onde **{_br(prop * 100, 1)}%** das empresas ativas são MEI. "
+                 "As barras mostram a divisão de cada lugar entre MEI, ME, EPP e Demais (todo MEI também tem "
+                 "porte 01; ele é contado primeiro)."),
+        "ato2": (f"## 2. Capital social: a mediana em **{uf_cap}** é a mais alta, **R$ {_br(med_cap)}**\n"
+                 f"A mediana das Demais (R$ {_br(f['capital_demais'])}) é {_br(razao)} vezes a do MEI "
+                 f"(R$ {_br(f['capital_mei'])}). **Capital social é o valor declarado na abertura**, não faturamento "
+                 "nem lucro, que a base não tem. A mediana é a medida principal: há muitos MEIs com R$ 1 e erros de "
+                 "cadastro na casa dos bilhões, que distorcem a soma."),
+        "ato3": (f"## 3. No mês, abriram **{_br(aberturas)}** empresas e **{_br(baixas)}** foram baixadas: "
+                 f"saldo de **{sinal}{_br(aberturas - baixas)}**\n"
+                 f"**{_br(pct_mei_aberturas * 100)}%** das aberturas são de MEI. Eventos tirados do Change Data "
+                 "Feed da base consolidada: abertura = empresa nova e ativa; baixa = situação passou a 08."),
+    }
+
+
+# ---------------------------------------------------------------- as perguntas
+
+def _mes(visao):
     return f"(SELECT MAX(ano_mes) FROM {visao})"
 
 
-# (nome, SQL, display, visualization_settings). Cada pergunta mostra o mês mais recente carregado.
-PERGUNTAS = [
-    ("1. Categorias por região (proporção)",
-     "SELECT regiao, categoria, proporcao FROM mv_categorias_regiao "
-     f"WHERE ano_mes = {_ultimo_mes('mv_categorias_regiao')} ORDER BY regiao, ordem",
-     "bar", {"graph.dimensions": ["regiao", "categoria"], "graph.metrics": ["proporcao"],
-             "stackable.stack_type": "stacked", "graph.y_axis.title_text": "Proporção das empresas ativas"}),
-    ("1. Categorias por UF",
-     "SELECT sigla_uf, categoria, qtd_empresas FROM mv_categorias_uf "
-     f"WHERE ano_mes = {_ultimo_mes('mv_categorias_uf')} ORDER BY sigla_uf, ordem",
-     "bar", {"graph.dimensions": ["sigla_uf", "categoria"], "graph.metrics": ["qtd_empresas"],
-             "stackable.stack_type": "stacked", "graph.y_axis.title_text": "Empresas ativas"}),
-    ("1. Categorias por município",
-     f"SELECT sigla_uf AS uf, municipio, categoria, qtd_empresas, ROUND(proporcao * 100, 1) AS \"proporção (%)\" "
-     f"FROM mv_categorias_municipio WHERE ano_mes = {_ultimo_mes('mv_categorias_municipio')} "
-     "ORDER BY sigla_uf, municipio, ordem",
-     "table", {}),
-    ("2. Mediana do capital social por UF",
-     f"SELECT sigla_uf, mediana_capital_social FROM mv_capital_uf WHERE ano_mes = {_ultimo_mes('mv_capital_uf')} "
-     "ORDER BY mediana_capital_social DESC",
-     "bar", {"graph.dimensions": ["sigla_uf"], "graph.metrics": ["mediana_capital_social"],
-             "graph.y_axis.title_text": "Mediana do capital social (R$)"}),
-    ("2. Capital social por região",
-     f"SELECT regiao, qtd_empresas, mediana_capital_social, soma_capital_social FROM mv_capital_regiao "
-     f"WHERE ano_mes = {_ultimo_mes('mv_capital_regiao')} ORDER BY mediana_capital_social DESC",
-     "table", {}),
-    ("2. Mediana do capital social por município",
-     f"SELECT sigla_uf AS uf, municipio, qtd_empresas, mediana_capital_social, soma_capital_social "
-     f"FROM mv_capital_municipio WHERE ano_mes = {_ultimo_mes('mv_capital_municipio')} "
-     "ORDER BY mediana_capital_social DESC",
-     "table", {}),
-    ("3. Aberturas e fechamentos por UF",
-     f"SELECT sigla_uf, tipo_evento, SUM(qtd_eventos) AS eventos FROM mv_movimentacao_uf "
-     f"WHERE ano_mes = {_ultimo_mes('mv_movimentacao_uf')} AND tipo_evento IN ('abertura', 'baixa') "
-     "GROUP BY 1, 2 ORDER BY 1, 2",
-     "bar", {"graph.dimensions": ["sigla_uf", "tipo_evento"], "graph.metrics": ["eventos"]}),
-    ("3. Movimentação por região e tipo de evento",
-     f"SELECT regiao, tipo_evento, categoria, qtd_eventos FROM mv_movimentacao_regiao "
-     f"WHERE ano_mes = {_ultimo_mes('mv_movimentacao_regiao')} ORDER BY regiao, tipo_evento, categoria",
-     "table", {}),
-    ("3. Aberturas e fechamentos de MEI por município",
-     f"SELECT sigla_uf AS uf, municipio, tipo_evento, qtd_eventos FROM mv_movimentacao_municipio "
-     f"WHERE ano_mes = {_ultimo_mes('mv_movimentacao_municipio')} AND categoria = 'MEI' "
-     "ORDER BY qtd_eventos DESC",
-     "table", {}),
-]
+PERCENTUAL = {"number_style": "percent", "decimals": 1}
+REAIS = {"number_style": "currency", "currency": "BRL", "decimals": 0}
 
-TEXTOS = {
-    0: "## 1. Em quais regiões há mais MEI, ME, EPP e Demais?\nEmpresas ativas (matriz com situação 02) no mês "
-       "mais recente. MEI vem primeiro: todo MEI também tem porte 01.",
-    3: "## 2. Onde as empresas têm maior capital social?\n**Capital social declarado na abertura da empresa.** "
-       "Não é faturamento nem lucro, que a base da Receita não tem. A **mediana** é a medida principal: há muitos "
-       "MEIs com R$ 1 e erros de cadastro na casa dos bilhões, que distorcem a soma.",
-    6: "## 3. Onde mais se abrem e se fecham empresas e MEIs?\nEventos do mês tirados do Change Data Feed: "
-       "abertura (empresa nova e ativa), baixa (situação passou a 08), mudança de porte, entrada e saída do MEI.",
-}
+
+def _cor(serie, cor):
+    return {serie: {"color": cor}}
+
+
+def perguntas():
+    """Os indicadores do topo e uma lista por ato. Cada item: (nome, SQL, display, visualization_settings)."""
+    por_mes = "to_date(ano_mes || '-01', 'YYYY-MM-DD') AS mes"
+    indicadores = [
+        ("Empresas ativas",
+         f"SELECT {por_mes}, COUNT(*) AS empresas_ativas FROM fato_empresa_mensal GROUP BY 1 ORDER BY 1",
+         "smartscalar", {}),
+        ("Participação do MEI",
+         f"SELECT {por_mes}, AVG((id_categoria = 'MEI')::int) AS participacao FROM fato_empresa_mensal "
+         "GROUP BY 1 ORDER BY 1",
+         "smartscalar", {"column_settings": {'["name","participacao"]': PERCENTUAL}}),
+        ("Mediana do capital social",
+         f"SELECT {por_mes}, percentile_cont(0.5) WITHIN GROUP (ORDER BY capital_social) AS mediana "
+         "FROM fato_empresa_mensal GROUP BY 1 ORDER BY 1",
+         "smartscalar", {"column_settings": {'["name","mediana"]': REAIS}}),
+        ("Saldo do mês (aberturas − baixas)",
+         "SELECT SUM(CASE tipo_evento WHEN 'abertura' THEN qtd_eventos WHEN 'baixa' THEN -qtd_eventos ELSE 0 END) "
+         f"AS saldo FROM mv_movimentacao_uf WHERE ano_mes = {_mes('mv_movimentacao_uf')}",
+         "scalar", {}),
+    ]
+    empilhado = {"stackable.stack_type": "normalized", "graph.show_values": True,
+                 "series_settings": {nome: {"color": cor} for nome, cor in COR_CATEGORIA.items()},
+                 "graph.y_axis.title_text": "Parte das empresas ativas", "graph.metrics": ["qtd_empresas"]}
+    ato1 = [
+        ("Divisão das empresas ativas por UF",
+         "SELECT sigla_uf AS uf, categoria, qtd_empresas FROM mv_categorias_uf "
+         f"WHERE ano_mes = {_mes('mv_categorias_uf')} ORDER BY sigla_uf, ordem",
+         "bar", {**empilhado, "graph.dimensions": ["uf", "categoria"]}),
+        ("Divisão das empresas ativas por região",
+         "SELECT regiao, categoria, qtd_empresas FROM mv_categorias_regiao "
+         f"WHERE ano_mes = {_mes('mv_categorias_regiao')} ORDER BY regiao, ordem",
+         "bar", {**empilhado, "graph.dimensions": ["regiao", "categoria"]}),
+        ("Municípios onde o MEI mais pesa (mín. 200 empresas ativas)",
+         "SELECT municipio || ' (' || sigla_uf || ')' AS municipio, proporcao AS participacao_mei "
+         f"FROM mv_categorias_municipio WHERE ano_mes = {_mes('mv_categorias_municipio')} AND categoria = 'MEI' "
+         "AND qtd_empresas / NULLIF(proporcao, 0) >= 200 ORDER BY proporcao DESC LIMIT 10",
+         "row", {"graph.dimensions": ["municipio"], "graph.metrics": ["participacao_mei"], "graph.show_values": True,
+                 "series_settings": _cor("participacao_mei", COR_CATEGORIA["MEI"]),
+                 "column_settings": {'["name","participacao_mei"]': PERCENTUAL}}),
+    ]
+    capital = {"series_settings": _cor("mediana", COR_CAPITAL), "graph.show_values": True,
+               "graph.metrics": ["mediana"], "column_settings": {'["name","mediana"]': REAIS}}
+    ato2 = [
+        ("Mediana do capital social por UF",
+         "SELECT sigla_uf AS uf, mediana_capital_social AS mediana FROM mv_capital_uf "
+         f"WHERE ano_mes = {_mes('mv_capital_uf')} ORDER BY mediana DESC",
+         "row", {**capital, "graph.dimensions": ["uf"]}),
+        ("Mediana do capital social por categoria",
+         "SELECT c.nome AS categoria, percentile_cont(0.5) WITHIN GROUP (ORDER BY f.capital_social) AS mediana "
+         "FROM fato_empresa_mensal f JOIN dim_categoria c USING (id_categoria) "
+         "WHERE f.ano_mes = (SELECT MAX(ano_mes) FROM fato_empresa_mensal) GROUP BY c.nome ORDER BY mediana DESC",
+         "row", {**capital, "graph.dimensions": ["categoria"]}),
+        ("Municípios com maior mediana de capital social (mín. 200 empresas)",
+         "SELECT municipio || ' (' || sigla_uf || ')' AS municipio, mediana_capital_social AS mediana "
+         f"FROM mv_capital_municipio WHERE ano_mes = {_mes('mv_capital_municipio')} AND qtd_empresas >= 200 "
+         "ORDER BY mediana DESC LIMIT 10",
+         "row", {**capital, "graph.dimensions": ["municipio"]}),
+    ]
+    ato3 = [
+        ("Aberturas (para cima) e baixas (para baixo) por UF",
+         "SELECT sigla_uf AS uf, SUM(qtd_eventos) FILTER (WHERE tipo_evento = 'abertura') AS aberturas, "
+         "-SUM(qtd_eventos) FILTER (WHERE tipo_evento = 'baixa') AS baixas FROM mv_movimentacao_uf "
+         f"WHERE ano_mes = {_mes('mv_movimentacao_uf')} GROUP BY 1 ORDER BY 1",
+         "bar", {"stackable.stack_type": "stacked", "graph.show_values": True,
+                 "series_settings": {**_cor("aberturas", COR_ABERTURA), **_cor("baixas", COR_BAIXA)},
+                 "graph.dimensions": ["uf"], "graph.metrics": ["aberturas", "baixas"],
+                 "graph.y_axis.title_text": "Empresas no mês"}),
+        ("Quem abre: aberturas por categoria",
+         "SELECT categoria, SUM(qtd_eventos) AS aberturas FROM mv_movimentacao_uf "
+         f"WHERE ano_mes = {_mes('mv_movimentacao_uf')} AND tipo_evento = 'abertura' GROUP BY 1 ORDER BY 2 DESC",
+         "row", {"graph.dimensions": ["categoria"], "graph.metrics": ["aberturas"], "graph.show_values": True,
+                 "series_settings": _cor("aberturas", COR_ABERTURA)}),
+        ("Municípios com maior saldo (aberturas − baixas)",
+         "SELECT municipio || ' (' || sigla_uf || ')' AS municipio, "
+         "SUM(CASE tipo_evento WHEN 'abertura' THEN qtd_eventos WHEN 'baixa' THEN -qtd_eventos ELSE 0 END) AS saldo "
+         f"FROM mv_movimentacao_municipio WHERE ano_mes = {_mes('mv_movimentacao_municipio')} "
+         "GROUP BY 1 ORDER BY saldo DESC LIMIT 10",
+         "row", {"graph.dimensions": ["municipio"], "graph.metrics": ["saldo"], "graph.show_values": True,
+                 "series_settings": _cor("saldo", COR_ABERTURA)}),
+    ]
+    return indicadores, [ato1, ato2, ato3]
 
 
 def pergunta(id_banco, id_colecao, existentes, nome, sql, display, ajustes):
@@ -133,33 +245,48 @@ def pergunta(id_banco, id_colecao, existentes, nome, sql, display, ajustes):
     return api("POST", "/card", corpo)["id"]
 
 
+def _texto(id_cartao, linha, conteudo, altura):
+    return {"id": id_cartao, "card_id": None, "row": linha, "col": 0, "size_x": 24, "size_y": altura,
+            "visualization_settings": {"text": conteudo, "virtual_card": {
+                "name": None, "display": "text", "visualization_settings": {}, "dataset_query": {}, "archived": False}}}
+
+
 def main():
     id_banco = banco()
     id_colecao = colecao()
-    itens = _lista(api("GET", f"/collection/{id_colecao}/items"))
+    itens = _lista(api("GET", f"/collection/{id_colecao or 'root'}/items"))
     existentes = {i["name"]: i["id"] for i in itens if i.get("model") == "card"}
     paineis = {i["name"]: i["id"] for i in itens if i.get("model") == "dashboard"}
+    historia = textos(fatos())
+    indicadores, atos = perguntas()
 
-    cartoes, linha, novo_id = [], 0, -1
-    for indice, (nome, sql, display, ajustes) in enumerate(PERGUNTAS):
-        if indice in TEXTOS:
-            cartoes.append({"id": novo_id, "card_id": None, "row": linha, "col": 0, "size_x": 24, "size_y": 2,
-                            "visualization_settings": {"text": TEXTOS[indice], "virtual_card": {
-                                "name": None, "display": "text", "visualization_settings": {}, "dataset_query": {},
-                                "archived": False}}})
-            novo_id -= 1
-            linha += 2
-        id_pergunta = pergunta(id_banco, id_colecao, existentes, nome, sql, display, ajustes)
-        coluna = (indice % 3) * 8
-        cartoes.append({"id": novo_id, "card_id": id_pergunta, "row": linha, "col": coluna, "size_x": 8, "size_y": 6})
-        novo_id -= 1
-        if indice % 3 == 2:
-            linha += 6
+    cartoes, usados, novo = [], set(), iter(range(-1, -100, -1))
+    cartoes.append(_texto(next(novo), 0, historia["intro"], 2))
+    for posicao, item in enumerate(indicadores):
+        id_pergunta = pergunta(id_banco, id_colecao, existentes, *item)
+        usados.add(id_pergunta)
+        cartoes.append({"id": next(novo), "card_id": id_pergunta, "row": 2, "col": posicao * 6,
+                        "size_x": 6, "size_y": 3})
+    linha = 5
+    for chave, ato in zip(("ato1", "ato2", "ato3"), atos):
+        cartoes.append(_texto(next(novo), linha, historia[chave], 2))
+        linha += 2
+        for posicao, item in enumerate(ato):
+            id_pergunta = pergunta(id_banco, id_colecao, existentes, *item)
+            usados.add(id_pergunta)
+            cartoes.append({"id": next(novo), "card_id": id_pergunta, "row": linha, "col": posicao * 8,
+                            "size_x": 8, "size_y": 7})
+        linha += 7
 
     id_painel = paineis.get(NOME_PAINEL) or api(
         "POST", "/dashboard", {"name": NOME_PAINEL, "collection_id": id_colecao})["id"]
     api("PUT", f"/dashboard/{id_painel}", {"dashcards": cartoes})
+    # Perguntas da versão anterior do painel que ficaram de fora vão para o arquivo (não são apagadas).
+    for id_pergunta in set(existentes.values()) - usados:
+        api("PUT", f"/card/{id_pergunta}", {"archived": True})
     print(f"painel: {URL}/dashboard/{id_painel}")
+    for chave in ("ato1", "ato2", "ato3"):
+        print(" -", historia[chave].splitlines()[0].lstrip("# "))
 
 
 if __name__ == "__main__":
