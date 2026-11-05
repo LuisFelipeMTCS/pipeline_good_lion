@@ -2,7 +2,9 @@
 # Corpo do Custom Transform LerMudancas da fato_movimentacao_empresa (o Glue o embrulha numa função).
 # Lê o Change Data Feed da silver_empresa_consolidada nas versões de MERGE do --ano_mes (marcadas no
 # userMetadata). Rodar o MERGE do mesmo mês de novo cria uma versão sem mudanças: nada se repete.
-# A entrada do nó (a própria consolidada, silver_<tabela>) só dá o nome da tabela; o bucket vem do --bucket_silver.
+# A entrada do nó (a própria consolidada, silver_<tabela>) só dá o nome da tabela; o bucket vem do --origem_silver.
+# Não pode se chamar --bucket_<algo>: o getResolvedOptions aceita abreviação, e o --bucket do job (Gold) era lido
+# como esse argumento conforme a ordem (o Workflow procurou a consolidada no bucket da Gold).
 import sys
 
 import boto3
@@ -10,7 +12,7 @@ from awsglue.dynamicframe import DynamicFrame, DynamicFrameCollection
 from awsglue.utils import getResolvedOptions
 from pyspark.sql import functions as F
 
-args = getResolvedOptions(sys.argv, ["bucket_silver", "ambiente"])
+args = getResolvedOptions(sys.argv, ["origem_silver", "ambiente"])
 # O mês vem do --ano_mes (execução manual) ou, dentro do Workflow, das propriedades da execução.
 if "--ano_mes" in sys.argv:
     ano_mes = getResolvedOptions(sys.argv, ["ano_mes"])["ano_mes"]
@@ -22,7 +24,7 @@ else:
 spark = glueContext.spark_session
 tabela = list(dfc.keys())[0].split("_node")[0].split("_", 1)[1]  # silver_empresa_consolidada -> empresa_consolidada
 prefixo = "sample/" if args["ambiente"] == "sample" else ""
-caminho = f"s3://{args['bucket_silver']}/{prefixo}{tabela}"
+caminho = f"s3://{args['origem_silver']}/{prefixo}{tabela}"
 versoes = [
     r["version"]
     for r in spark.sql(f"DESCRIBE HISTORY delta.`{caminho}`")

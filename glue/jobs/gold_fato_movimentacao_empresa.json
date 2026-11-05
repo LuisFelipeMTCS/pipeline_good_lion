@@ -22,7 +22,7 @@
     "--TempDir": "s3://goodlion-artifacts-724793286570/temporary/",
     "--bucket": "goodlion-gold-724793286570",
     "--enable-continuous-cloudwatch-log": "true",
-    "--bucket_silver": "goodlion-silver-724793286570"
+    "--origem_silver": "goodlion-silver-724793286570"
   },
   "CodeGenConfigurationNodes": {
     "node-consolidada": {

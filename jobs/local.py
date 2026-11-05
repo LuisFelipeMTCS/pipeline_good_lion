@@ -199,7 +199,7 @@ def gold_fato_empresa_mensal(spark, origem, destino, ano_mes):
 def gold_fato_movimentacao_empresa(spark, origem, destino, ano_mes, tabela="empresa_consolidada"):
     vazio = spark.createDataFrame([], "x string")  # no Glue, a origem do nó; aqui só leva o nome da tabela
     mudancas = _custom(spark, "ler_mudancas", "LerMudancas", {f"silver_{tabela}_nodeconsolidada": vazio},
-                       ano_mes=ano_mes, bucket_silver=_bucket(origem), ambiente="sample")
+                       ano_mes=ano_mes, origem_silver=_bucket(origem), ambiente="sample")
     saida = _sql(spark, "gold/fato_movimentacao_empresa", mudancas=mudancas)
     _gravar_delta(saida, f"{destino}/fato_movimentacao_empresa", ano_mes)
 
