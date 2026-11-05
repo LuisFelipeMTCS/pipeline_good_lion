@@ -2,7 +2,22 @@
 -- todas já limitadas ao --ano_mes. Grão: 1 empresa ativa × ano_mes (PRD, seção 6).
 -- Empresa ativa e localização vêm do estabelecimento matriz; categoria: MEI primeiro (todo MEI tem
 -- porte 01), depois o porte (01 = ME, 03 = EPP, 05 ou 00 = Demais).
-WITH estabelecimentos_ativos AS (
+WITH matriz AS (
+    -- Uma matriz por empresa: o cadastro da Receita tem raros CNPJs com duas matrizes ativas (08314885 na base
+    -- completa). Vale a mais antiga.
+    SELECT *
+    FROM (
+        SELECT
+            *,
+            ROW_NUMBER() OVER (
+                PARTITION BY cnpj_basico, ano_mes ORDER BY data_inicio_atividade, cnpj_ordem
+            ) AS ordem_matriz
+        FROM silver_estabelecimentos
+        WHERE empresa_ativa
+    ) AS matrizes
+    WHERE ordem_matriz = 1
+),
+estabelecimentos_ativos AS (
     SELECT cnpj_basico, ano_mes, COUNT(*) AS qtd_estabelecimentos
     FROM silver_estabelecimentos
     WHERE situacao_cadastral = '02'
@@ -23,8 +38,7 @@ SELECT
     e.capital_social,
     a.qtd_estabelecimentos,
     m.ano_mes
-FROM silver_estabelecimentos AS m
+FROM matriz AS m
 JOIN silver_empresas AS e ON e.cnpj_basico = m.cnpj_basico AND e.ano_mes = m.ano_mes
 LEFT JOIN silver_simples AS s ON s.cnpj_basico = m.cnpj_basico AND s.ano_mes = m.ano_mes
 JOIN estabelecimentos_ativos AS a ON a.cnpj_basico = m.cnpj_basico AND a.ano_mes = m.ano_mes
-WHERE m.empresa_ativa

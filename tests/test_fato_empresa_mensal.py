@@ -141,3 +141,19 @@ def test_cnpj_repetido_no_arquivo_de_empresas_vira_uma_linha_so(spark, tmp_path)
     porte = spark.read.format("delta").load(str(tmp_path / "silver" / "empresas")).collect()
     assert [r["porte"] for r in porte] == ["05"]
 
+
+def test_empresa_com_duas_matrizes_ativas_conta_uma_vez_pela_mais_antiga(spark, tmp_path):
+    # Como o 08314885 na base completa: duas matrizes ativas, em municípios diferentes.
+    _gravar(tmp_path, "empresas", [{"cnpj_basico": "00000001", "porte": "05", "capital_social": "0,00"}])
+    matriz = {"cnpj_basico": "00000001", "identificador_matriz_filial": "1", "situacao_cadastral": "02"}
+    _gravar(tmp_path, "estabelecimentos", [
+        {**matriz, "cnpj_ordem": "0047", "id_municipio_rf": "6613", "data_inicio_atividade": "20240129"},
+        {**matriz, "cnpj_ordem": "0039", "id_municipio_rf": "6945", "data_inicio_atividade": "20200825"},
+    ])
+    _gravar(tmp_path, "simples", [])
+
+    linhas = _rodar(spark, tmp_path).collect()
+
+    assert [(r["cnpj_basico"], r["id_municipio_rf"], r["qtd_estabelecimentos"]) for r in linhas] == [
+        ("00000001", "6945", 2)]
+

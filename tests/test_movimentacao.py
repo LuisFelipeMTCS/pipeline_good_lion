@@ -24,11 +24,11 @@ def cdc(spark):
     silver, gold, tabela = f"s3a://silver/teste-{id_teste}", f"s3a://gold/teste-{id_teste}", f"teste{id_teste}"
 
     def _rodar(ano_mes, empresas):
-        estab = [(e["cnpj"], 1, e["situacao"], e["situacao"] == "02", "0139", ano_mes) for e in empresas]
+        estab = [(e["cnpj"], "0001", 1, e["situacao"], e["situacao"] == "02", "0139", None, ano_mes) for e in empresas]
         tabelas = {
-            "estabelecimentos": (estab, "cnpj_basico string, identificador_matriz_filial int, "
+            "estabelecimentos": (estab, "cnpj_basico string, cnpj_ordem string, identificador_matriz_filial int, "
                                         "situacao_cadastral string, empresa_ativa boolean, id_municipio_rf string, "
-                                        "ano_mes string"),
+                                        "data_inicio_atividade date, ano_mes string"),
             "empresas": ([(e["cnpj"], e["porte"], ano_mes) for e in empresas],
                          "cnpj_basico string, porte string, ano_mes string"),
             "simples": ([(e["cnpj"], e["mei"], ano_mes) for e in empresas],
