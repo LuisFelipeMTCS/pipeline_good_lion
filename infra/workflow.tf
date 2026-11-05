@@ -41,7 +41,8 @@ locals {
     { nome = "consolidada-e-dimensoes", jobs = ["silver_empresa_consolidada", "gold_dim_municipio", "gold_dimensoes"], crawlers = [] },
     { nome = "fatos", jobs = ["gold_fato_empresa_mensal", "gold_fato_movimentacao_empresa"], crawlers = [] },
     { nome = "manutencao", jobs = ["manutencao"], crawlers = [] },
-    { nome = "catalogo-silver-gold", jobs = [], crawlers = [for c in aws_glue_crawler.delta : c.name] },
+    # Os crawlers da amostra; na base completa, rodar goodlion-silver-full e goodlion-gold-full depois (ticket 17).
+    { nome = "catalogo-silver-gold", jobs = [], crawlers = [aws_glue_crawler.delta["silver"].name, aws_glue_crawler.delta["gold"].name] },
   ]
 }
 

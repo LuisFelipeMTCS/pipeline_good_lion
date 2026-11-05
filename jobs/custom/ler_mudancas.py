@@ -10,7 +10,7 @@ from awsglue.dynamicframe import DynamicFrame, DynamicFrameCollection
 from awsglue.utils import getResolvedOptions
 from pyspark.sql import functions as F
 
-args = getResolvedOptions(sys.argv, ["bucket_silver"])
+args = getResolvedOptions(sys.argv, ["bucket_silver", "ambiente"])
 # O mês vem do --ano_mes (execução manual) ou, dentro do Workflow, das propriedades da execução.
 if "--ano_mes" in sys.argv:
     ano_mes = getResolvedOptions(sys.argv, ["ano_mes"])["ano_mes"]
@@ -21,7 +21,8 @@ else:
     )["RunProperties"]["ano_mes"]
 spark = glueContext.spark_session
 tabela = list(dfc.keys())[0].split("_node")[0].split("_", 1)[1]  # silver_empresa_consolidada -> empresa_consolidada
-caminho = f"s3://{args['bucket_silver']}/sample/{tabela}"
+prefixo = "sample/" if args["ambiente"] == "sample" else ""
+caminho = f"s3://{args['bucket_silver']}/{prefixo}{tabela}"
 versoes = [
     r["version"]
     for r in spark.sql(f"DESCRIBE HISTORY delta.`{caminho}`")

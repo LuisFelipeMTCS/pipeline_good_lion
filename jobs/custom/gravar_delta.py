@@ -9,16 +9,14 @@ import time
 from awsglue.utils import getResolvedOptions
 
 args = getResolvedOptions(sys.argv, ["JOB_NAME", "bucket", "ambiente"])
-# shortcut: a origem (Catalog do raw) só tem a amostra; liberar o full junto com o crawler
-# da base completa (ticket 17).
-if args["ambiente"] != "sample":
-    raise ValueError("--ambiente full ainda não suportado")
+# Amostra no prefixo sample/; base completa na raiz do bucket (ARQUITETURA, convenções).
+prefixo = "sample/" if args["ambiente"] == "sample" else ""
 # O Glue chama a entrada de "<nome do nó anterior>_<id do nó>". O nó anterior se chama <camada>_<tabela>
 # (bronze_cnaes -> cnaes): é assim que um job só (bronze_dominios) grava várias tabelas.
 chave = list(dfc.keys())[0]
 tabela = chave.split("_node")[0].split("_", 1)[1]
 df = dfc.select(chave).toDF()
-caminho = f"s3://{args['bucket']}/sample/{tabela}"
+caminho = f"s3://{args['bucket']}/{prefixo}{tabela}"
 linhas = 0
 meses = []
 if "ano_mes" not in df.columns:

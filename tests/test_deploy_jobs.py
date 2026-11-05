@@ -33,3 +33,18 @@ def test_todos_os_jobs_montam_e_o_no_antes_do_gravar_delta_da_o_nome_da_tabela()
             if no.get("CustomCode", {}).get("ClassName", "").startswith("GravarDelta"):
                 anterior = next(iter(nos[no["CustomCode"]["Inputs"][0]].values()))["Name"]
                 assert anterior.startswith(f"{camada}_"), (arquivo.name, anterior)
+
+
+def test_full_aponta_os_mesmos_jobs_para_a_base_completa():
+    def ler(nome):
+        return deploy_jobs.para_full(json.loads((deploy_jobs.RAIZ / f"glue/jobs/{nome}.json").read_text()))
+
+    bronze, silver, dominios = ler("bronze_estabelecimentos"), ler("silver_empresas"), ler("bronze_dominios")
+
+    assert bronze["CodeGenConfigurationNodes"]["node-raw"]["CatalogSource"]["Table"] == "full_estabelecimentos"
+    assert (bronze["DefaultArguments"]["--ambiente"], bronze["NumberOfWorkers"], bronze["Timeout"]) == ("full", 10, 180)
+    assert silver["CodeGenConfigurationNodes"]["node-empresas"]["S3DeltaSource"]["Paths"] == [
+        "s3://goodlion-bronze-724793286570/empresas/"]
+    assert "/sample/" not in json.dumps(silver)
+    assert dominios["NumberOfWorkers"] == 2
+

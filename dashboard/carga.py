@@ -2,6 +2,7 @@
 from pathlib import Path
 
 import psycopg
+import pyarrow.dataset as ds
 from deltalake import DeltaTable
 from deltalake.exceptions import TableNotFoundError
 
@@ -22,31 +23,34 @@ VISOES = (
 )
 
 
-def _copiar(conexao, tabela, colunas, linhas):
+def _copiar(conexao, tabela, colunas, lotes):
     with conexao.cursor().copy(f"COPY {tabela} ({', '.join(colunas)}) FROM STDIN") as copia:
-        for linha in linhas:
-            copia.write_row([linha[coluna] for coluna in colunas])
+        for lote in lotes:
+            for linha in zip(*(lote.column(coluna).to_pylist() for coluna in colunas)):
+                copia.write_row(linha)
 
 
 def carregar_mes(gold, ano_mes, conninfo, storage_options=None):
-    def ler(tabela, colunas, filtros=None):
-        delta = DeltaTable(f"{gold}/{tabela}", storage_options=storage_options)
-        return delta.to_pyarrow_table(filters=filtros, columns=list(colunas)).to_pylist()
+    def ler(tabela, colunas, ano_mes=None):
+        """Lotes do Arrow, sem trazer a tabela inteira para a memória: na base completa a fato do mês tem
+        dezenas de milhões de linhas."""
+        conjunto = DeltaTable(f"{gold}/{tabela}", storage_options=storage_options).to_pyarrow_dataset()
+        filtro = (ds.field("ano_mes") == ano_mes) if ano_mes else None
+        return conjunto.to_batches(columns=list(colunas), filter=filtro, batch_size=200_000)
 
-    fato = ler("fato_empresa_mensal", FATO, [("ano_mes", "=", ano_mes)])
     try:
-        movimentacao = ler("fato_movimentacao_empresa", MOVIMENTACAO, [("ano_mes", "=", ano_mes)])
+        DeltaTable(f"{gold}/fato_movimentacao_empresa", storage_options=storage_options)
+        movimentacao = ler("fato_movimentacao_empresa", MOVIMENTACAO, ano_mes)
     except TableNotFoundError:  # antes do primeiro MERGE com mudanças a tabela ainda não existe
         movimentacao = []
-    dimensoes = {tabela: ler(tabela, colunas) for tabela, colunas in DIMENSOES.items()}
     with psycopg.connect(conninfo) as conexao:
         conexao.execute(ESQUEMA.read_text(encoding="utf-8"))
         # Idempotência: tudo numa transação; o mês da fato é apagado e reinserido, as dimensões inteiras.
         for tabela, colunas in DIMENSOES.items():
             conexao.execute(f"DELETE FROM {tabela}")
-            _copiar(conexao, tabela, colunas, dimensoes[tabela])
+            _copiar(conexao, tabela, colunas, ler(tabela, colunas))
         conexao.execute("DELETE FROM fato_empresa_mensal WHERE ano_mes = %s", [ano_mes])
-        _copiar(conexao, "fato_empresa_mensal", FATO, fato)
+        _copiar(conexao, "fato_empresa_mensal", FATO, ler("fato_empresa_mensal", FATO, ano_mes))
         conexao.execute("DELETE FROM fato_movimentacao_empresa WHERE ano_mes = %s", [ano_mes])
         _copiar(conexao, "fato_movimentacao_empresa", MOVIMENTACAO, movimentacao)
         for visao in VISOES:

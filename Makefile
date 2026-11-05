@@ -4,7 +4,7 @@ TABELAS ?=
 # Variáveis do .env (credenciais do MinIO, endpoint S3). Crie com: cp .env.example .env
 PY := uv run --env-file .env python
 
-.PHONY: setup up down test test-spark lint ingest ingest-ibge amostra amostra-aws pipeline dashboard-load deploy-jobs workflow
+.PHONY: setup up down test test-spark lint ingest ingest-ibge amostra amostra-aws pipeline dashboard-load dashboard-load-aws deploy-jobs workflow
 
 setup:  ## cria o .venv e instala as dependências travadas no uv.lock
 	uv sync
@@ -44,6 +44,10 @@ pipeline:  ## bronze → silver → gold de Estabelecimentos da amostra, no cont
 
 dashboard-load:  ## carrega o mês da Gold no Postgres e atualiza as visões do Metabase
 	$(PY) -m dashboard.carga --ano_mes $(ANO_MES)
+
+AMBIENTE ?= sample
+dashboard-load-aws:  ## carrega o mês da Gold da AWS no Postgres, com o papel analista (AMBIENTE=full: base completa)
+	$(PY) -m scripts.carga_aws --ano_mes $(ANO_MES) --ambiente $(AMBIENTE)
 
 deploy-jobs:  ## publica os jobs visuais de glue/jobs/ na AWS (perfil default; sem o .env, que é do MinIO)
 	uv run python scripts/deploy_jobs.py

@@ -1,7 +1,16 @@
 # Tabelas do raw com esquema nosso, tudo texto (quem tipa é a Bronze). Deixar o crawler deduzir dá bigint
 # e o cnpj_basico perde os zeros à esquerda; nem o classificador com CustomDatatypes = STRING evitou isso.
+locals {
+  colunas_raw = jsondecode(file("${path.module}/colunas_raw.json"))
+  # Amostra em raw/sample/<tabela>/ (tabela <tabela>) e base completa em raw/<tabela>/ (tabela full_<tabela>).
+  tabelas_raw = merge(
+    { for t, colunas in local.colunas_raw : t => { colunas = colunas, local = "sample/${t}/" } },
+    { for t, colunas in local.colunas_raw : "full_${t}" => { colunas = colunas, local = "${t}/" } },
+  )
+}
+
 resource "aws_glue_catalog_table" "raw" {
-  for_each      = jsondecode(file("${path.module}/colunas_raw.json"))
+  for_each      = local.tabelas_raw
   name          = each.key
   database_name = aws_glue_catalog_database.camada["raw"].name
   table_type    = "EXTERNAL_TABLE"
@@ -18,9 +27,8 @@ resource "aws_glue_catalog_table" "raw" {
     type = "string"
   }
 
-  # shortcut: só a amostra é catalogada (os jobs leem o S3 direto); apontar para a raiz se o Athena precisar da base completa.
   storage_descriptor {
-    location      = "s3://${aws_s3_bucket.camada["raw"].bucket}/sample/${each.key}/"
+    location      = "s3://${aws_s3_bucket.camada["raw"].bucket}/${each.value.local}"
     input_format  = "org.apache.hadoop.mapred.TextInputFormat"
     output_format = "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat"
     ser_de_info {
@@ -28,7 +36,7 @@ resource "aws_glue_catalog_table" "raw" {
       parameters            = { separatorChar = ";", quoteChar = "\"" }
     }
     dynamic "columns" {
-      for_each = each.value
+      for_each = each.value.colunas
       content {
         name = columns.value
         type = "string"
@@ -81,15 +89,26 @@ locals {
   }
 }
 
+# Um crawler por camada e por ambiente: amostra (sample/) com o nome da tabela; base completa (raiz do bucket)
+# com o prefixo full_, para as duas conviverem no mesmo banco.
+locals {
+  crawlers_delta = merge(
+    { for c, ts in local.tabelas_delta : c => { camada = c, tabelas = ts, raiz = "sample/", prefixo = "" } },
+    { for c, ts in local.tabelas_delta : "${c}-full" => { camada = c, tabelas = ts, raiz = "", prefixo = "full_" } },
+  )
+}
+
 resource "aws_glue_crawler" "delta" {
-  for_each      = local.tabelas_delta
+  for_each      = local.crawlers_delta
   name          = "${var.prefixo}-${each.key}"
   role          = aws_iam_role.glue_pipeline.arn
-  database_name = aws_glue_catalog_database.camada[each.key].name
+  database_name = aws_glue_catalog_database.camada[each.value.camada].name
+  table_prefix  = each.value.prefixo
 
-  # shortcut: só a amostra; na rodada final (ticket 17) os caminhos passam para a raiz do bucket.
   delta_target {
-    delta_tables              = [for t in each.value : "s3://${aws_s3_bucket.camada[each.key].bucket}/sample/${t}/"]
+    delta_tables = [
+      for t in each.value.tabelas : "s3://${aws_s3_bucket.camada[each.value.camada].bucket}/${each.value.raiz}${t}/"
+    ]
     write_manifest            = false
     create_native_delta_table = true
   }

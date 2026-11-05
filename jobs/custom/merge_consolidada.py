@@ -20,11 +20,10 @@ else:
     ano_mes = boto3.client("glue").get_workflow_run_properties(
         Name=workflow["WORKFLOW_NAME"], RunId=workflow["WORKFLOW_RUN_ID"]
     )["RunProperties"]["ano_mes"]
-if args["ambiente"] != "sample":
-    raise ValueError("--ambiente full ainda não suportado")
+prefixo = "sample/" if args["ambiente"] == "sample" else ""
 chave = list(dfc.keys())[0]
 tabela = chave.split("_node")[0].split("_", 1)[1]  # silver_empresa_consolidada -> empresa_consolidada
-caminho = f"s3://{args['bucket']}/sample/{tabela}"
+caminho = f"s3://{args['bucket']}/{prefixo}{tabela}"
 spark = glueContext.spark_session
 novo = dfc.select(chave).toDF().withColumn("ano_mes_alteracao", F.lit(ano_mes))
 spark.conf.set("spark.databricks.delta.commitInfo.userMetadata", ano_mes)
