@@ -108,7 +108,8 @@ pipeline_good_lion/
 | Colunas | snake_case com os nomes do SDK da Base dos Dados | `id_municipio_rf` |
 | Gravação | Nunca `append`: `replaceWhere` por `ano_mes` ou `MERGE` | — |
 | Parâmetros | Todo job recebe `--ano_mes`, `--bucket` (bucket de destino), `--ambiente` (`sample`/`full`). Dentro do Glue Workflow o `--ano_mes` não vem: o mês está nas propriedades da execução (fixadas pelo `ingest/definir_mes.py`), e os jobs leem de lá. Na Bronze o `--ano_mes` não é usado: quem limita a leitura é o Bookmark (PRD, 5.4) | `--bucket goodlion-bronze-<conta>` |
-| O ambiente | É parâmetro do job, **não** variável do Terraform: a infraestrutura é uma só | — |
+| O ambiente | É parâmetro do job, **não** variável do Terraform: a infraestrutura é uma só. Os JSON de `glue/jobs/` descrevem a amostra; `scripts/deploy_jobs.py --ambiente full` publica os mesmos jobs para a base completa (caminhos sem `sample/`, tabelas `full_<tabela>` do raw, até 10 workers). No Catalog, a base completa tem as tabelas `full_<tabela>` (raw, Silver e Gold) | — |
+| Nomes de argumento | Nenhum argumento pode ser prefixo de outro (`--bucket` × `--bucket_silver`): o `getResolvedOptions` aceita abreviação e um lê o valor do outro conforme a ordem | `--origem_silver` |
 | Código | Nomes em português, ruff, `ingest/` compatível com Py 3.9 | — |
 | Testes | `make test` no host (sem Spark); `make test-spark` no container do Glue | — |
 | Commits | `Conclui o ticket NN: …` | — |
