@@ -32,3 +32,29 @@ def test_compacta_as_tabelas_delta_do_bucket_e_ignora_o_que_nao_e_delta(spark):
     finally:
         s3.Bucket(bucket).objects.delete()
         s3.Bucket(bucket).delete()
+
+
+def test_com_mes_compacta_so_a_particao_do_mes(spark):
+    import boto3
+
+    spark.sparkContext._jsc.hadoopConfiguration().set("fs.s3.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
+    s3 = boto3.resource("s3", endpoint_url="http://minio:9000")
+    bucket = f"teste-{uuid.uuid4().hex[:8]}"
+    s3.create_bucket(Bucket=bucket)
+    try:
+        caminho = f"s3://{bucket}/sample/fato"
+        for mes in ("2026-09", "2026-10"):
+            for lote in range(3):
+                spark.createDataFrame([(f"{lote:08d}", mes)], "cnpj_basico string, ano_mes string").write \
+                    .format("delta").mode("append").partitionBy("ano_mes").save(caminho)
+
+        local._custom(spark, "manutencao", "Manutencao", {"origem": spark.createDataFrame([], "x string")},
+                      buckets=bucket, ambiente="sample", ano_mes="2026-10")
+
+        arquivos = spark.read.format("delta").load(caminho).selectExpr("ano_mes", "input_file_name() AS f") \
+            .distinct().groupBy("ano_mes").count().collect()
+        assert sorted((r["ano_mes"], r["count"]) for r in arquivos) == [("2026-09", 3), ("2026-10", 1)]
+    finally:
+        s3.Bucket(bucket).objects.delete()
+        s3.Bucket(bucket).delete()
+
