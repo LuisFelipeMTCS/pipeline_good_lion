@@ -24,3 +24,21 @@
 | `fato_movimentacao_empresa` 2026-10 | abertura 2.308, baixa 1.016, mudança de porte 67, entrada no MEI 1, saída do MEI 895 |
 | `dim_municipio` | 53 |
 | `silver.empresa_consolidada` | 452.546 |
+
+## 2ª execução de 2026-10: idempotência (05/11/2026)
+
+`wr_cba0a256…` parou logo na `ingest_receita` (uma execução por vez, e a ingestão completa de 2026-10 do ticket 17 estava rodando: o Workflow parou, como deve). Retomada automática quando a ingestão terminou: `wr_ff58fdf1…`, **COMPLETED, 20 de 20 ações**.
+
+Antes desta execução o Bookmark da Bronze de Estabelecimentos foi zerado, para regravar os dois meses com o telefone mascarado (ticket 10). Mesmo com a Bronze regravada, **as contagens da Gold ficaram idênticas** às da 1ª execução (tabela acima: fato por categoria nos dois meses, eventos de 2026-10, `dim_municipio`, consolidada).
+
+Telefone na Bronze depois da execução: 0 valores com dígitos; 388.456 (2026-09) e 390.900 (2026-10) mascarados, DDD mantido.
+
+## Provas do ticket
+
+| Critério | Onde |
+|---|---|
+| Execução completa na amostra | `wr_4cea530a…` (retomada) e `wr_ff58fdf1…` |
+| Retomada a partir do passo que falhou | `resume-workflow-run` em `wr_ff6fb8ba…` (falha real) e em `wr_cba0a256…` |
+| Idempotência | 2ª execução de 2026-10: Gold idêntica |
+| Falha bloqueante para o Workflow e manda o e-mail | DQ do ticket 11 (`docs/evidencias/11-data-quality.md`) + a falha da fato de movimentação, que parou o Workflow e passou pela regra do EventBridge |
+

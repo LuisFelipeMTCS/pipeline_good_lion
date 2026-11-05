@@ -4,15 +4,15 @@
 
 **Bloqueado por:** 05, 06, 09, 10, 11, 12, 13, 14
 
-**Status:** in-progress (Workflow no Terraform; falta aplicar e as provas na AWS)
+**Status:** done
 
 - [x] Workflow e gatilhos criados pelo Terraform (`infra/workflow.tf`), na ordem: ingestões em paralelo → crawler do `raw` → Bronzes em paralelo → DataBrew do IBGE → Silvers + consolidada → dimensões → fatos → manutenção → crawler Silver/Gold
 - [x] Gatilho mensal (dia 20) e gatilho sob demanda
 - [x] Todos os jobs visuais publicados pelo `scripts/deploy_jobs.py` a partir de `glue/jobs/`, com 1 nova tentativa e timeout próprio
-- [ ] Execução completa na amostra termina com sucesso
-- [ ] Prova de retomada: forçar falha num passo do meio, corrigir e retomar a partir dele
-- [ ] Prova de idempotência: rodar o mesmo mês duas vezes e comparar as contagens da Gold
-- [ ] Falha de regra bloqueante interrompe o Workflow e dispara o e-mail do ticket 06
+- [x] Execução completa na amostra termina com sucesso
+- [x] Prova de retomada: forçar falha num passo do meio, corrigir e retomar a partir dele
+- [x] Prova de idempotência: rodar o mesmo mês duas vezes e comparar as contagens da Gold
+- [x] Falha de regra bloqueante interrompe o Workflow e dispara o e-mail do ticket 06
 
 ## Andamento (03/11/2026)
 
@@ -30,3 +30,6 @@
 3. `make workflow ANO_MES=2026-09`, depois `make workflow ANO_MES=2026-10` (nessa ordem, por causa do CDC);
 4. Provas: retomada (ex.: apagar o `silver/ibge_municipios/` para o `gold_dim_municipio` falhar, recriar e `resume-workflow-run`); idempotência (repetir 2026-10 e comparar as contagens da Gold); regra bloqueante (linha com `cnpj_basico` inválido) parando o Workflow e mandando o e-mail.
 
+## Na AWS (05/11/2026)
+
+Execuções, falha real, retomadas e idempotência: `docs/evidencias/16-workflow.md`. O gatilho mensal ficou ligado (um só gatilho inicial por Workflow); desligar depois da entrega.
