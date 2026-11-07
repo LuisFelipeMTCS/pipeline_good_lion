@@ -4,6 +4,7 @@ Um arquivo por ticket, com números medidos na AWS (conta 724793286570, us-east-
 
 | Item da rubrica | Evidência | Destaque |
 |---|---|---|
+| Alertas de falha por e-mail | [06-alerta-email.png](06-alerta-email.png), [ticket 06](../issues/06-alertas-e-observabilidade.md) | Falha real do Glue → EventBridge → SNS → e-mail em 1 minuto |
 | Bronze com Job Bookmarks, jobs visuais | [04-bronze-estabelecimentos.md](04-bronze-estabelecimentos.md) | 2ª execução sem arquivos novos não regrava nada |
 | Fonte JSON + DataBrew (limpeza) + dimensão | [07-dim-municipio.md](07-dim-municipio.md) | 5.571 de 5.571 municípios casados com o IBGE; 22 correções manuais |
 | PII automatizado | [10-pii.md](10-pii.md) | 0 e-mails, 0 CPFs, 0 telefones na Bronze (amostra e base completa); o detector sozinho deixava escapar formatos malformados |

@@ -13,9 +13,9 @@ Tickets em fatias verticais (tracer bullets) gerados a partir do [PRD](../PRD.md
 |---|---|---|
 
 ### Em andamento
-- [06 — Alertas de falha por e-mail e observabilidade](06-alertas-e-observabilidade.md) (falta o print do e-mail da falha forçada)
 
 ### Concluído
+- [06 — Alertas de falha por e-mail e observabilidade](06-alertas-e-observabilidade.md)
 - [10 — PII mascarado na Bronze](10-pii-mascarado-na-bronze.md)
 - [17 — Rodada final na base completa](17-rodada-final-base-completa.md)
 - [16 — Workflow ponta a ponta](16-workflow-ponta-a-ponta.md)
