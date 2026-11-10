@@ -8,3 +8,6 @@ __pycache__/
 .terraform/
 .claude/
 terraform.tfvars
+
+# Documentação (PRD, arquitetura, tickets, evidências, relatório) fica só na máquina local
+docs/
