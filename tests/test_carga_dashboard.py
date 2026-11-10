@@ -99,22 +99,22 @@ def test_carregar_um_mes_nao_apaga_o_outro(postgres, tmp_path):
     ]
 
 
-def test_capital_social_com_mediana_e_soma_por_uf_e_regiao(postgres, tmp_path):
-    # Um valor extremo (erro de cadastro na casa do bilhão) mexe na soma, não na mediana.
+def test_capital_social_com_media_e_soma_por_uf_e_regiao(postgres, tmp_path):
+    # A média entra junto com o valor extremo (erro de cadastro na casa do bilhão): é o que o painel mostra.
     _gravar_gold(tmp_path, FATO, capitais=["1.00", "5000.00", "20000.00", "1000000000.00", "10.00"])
 
     carregar_mes(str(tmp_path), "2026-09", postgres)
 
     with psycopg.connect(postgres) as conexao:
         uf = conexao.execute(
-            "SELECT sigla_uf, qtd_empresas, mediana_capital_social, soma_capital_social FROM mv_capital_uf ORDER BY 1"
+            "SELECT sigla_uf, qtd_empresas, media_capital_social, soma_capital_social FROM mv_capital_uf ORDER BY 1"
         ).fetchall()
-        regiao = conexao.execute("SELECT regiao, mediana_capital_social FROM mv_capital_regiao").fetchall()
+        regiao = conexao.execute("SELECT regiao, media_capital_social FROM mv_capital_regiao").fetchall()
     assert uf == [
-        ("AC", 3, decimal.Decimal("5000.00"), decimal.Decimal("25001.00")),
+        ("AC", 3, decimal.Decimal("8333.67"), decimal.Decimal("25001.00")),
         ("AP", 1, decimal.Decimal("1000000000.00"), decimal.Decimal("1000000000.00")),
     ]
-    assert regiao == [("Norte", decimal.Decimal("12500.00"))]
+    assert regiao == [("Norte", decimal.Decimal("250006250.25"))]
 
 
 

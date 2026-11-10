@@ -90,7 +90,6 @@ def fatos():
             return c.execute(sql, parametros).fetchone()
 
         mes = um("SELECT MAX(ano_mes) FROM fato_empresa_mensal")[0]
-        mediana = "percentile_cont(0.5) WITHIN GROUP (ORDER BY capital_social)"
         return {
             "mes": mes,
             "mais_comum": um("SELECT c.nome, COUNT(*)::numeric / SUM(COUNT(*)) OVER () FROM fato_empresa_mensal f "
@@ -98,11 +97,11 @@ def fatos():
                              "ORDER BY 2 DESC LIMIT 1", mes),
             "mei_uf": um("SELECT sigla_uf, proporcao FROM mv_categorias_uf WHERE ano_mes = %s AND categoria = 'MEI' "
                          "ORDER BY proporcao DESC LIMIT 1", mes),
-            "capital_uf": um("SELECT sigla_uf, mediana_capital_social FROM mv_capital_uf WHERE ano_mes = %s "
-                             "ORDER BY mediana_capital_social DESC LIMIT 1", mes),
-            "capital_mei": um(f"SELECT {mediana} FROM fato_empresa_mensal WHERE ano_mes = %s "
+            "capital_uf": um("SELECT sigla_uf, media_capital_social FROM mv_capital_uf WHERE ano_mes = %s "
+                             "ORDER BY media_capital_social DESC LIMIT 1", mes),
+            "capital_mei": um("SELECT AVG(capital_social) FROM fato_empresa_mensal WHERE ano_mes = %s "
                               "AND id_categoria = 'MEI'", mes)[0],
-            "capital_demais": um(f"SELECT {mediana} FROM fato_empresa_mensal WHERE ano_mes = %s "
+            "capital_demais": um("SELECT AVG(capital_social) FROM fato_empresa_mensal WHERE ano_mes = %s "
                                  "AND id_categoria = 'DEMAIS'", mes)[0],
             "eventos": um("SELECT COALESCE(SUM(qtd_eventos) FILTER (WHERE tipo_evento = 'abertura'), 0), "
                           "COALESCE(SUM(qtd_eventos) FILTER (WHERE tipo_evento = 'baixa'), 0), "
@@ -114,7 +113,7 @@ def fatos():
 def textos(f):
     uf, prop = f["mei_uf"]
     categoria, parte = f["mais_comum"]
-    uf_cap, med_cap = f["capital_uf"]
+    uf_cap, media_cap = f["capital_uf"]
     aberturas, baixas, aberturas_mei = f["eventos"]
     pct_mei_aberturas = aberturas_mei / aberturas if aberturas else 0
     razao = (f["capital_demais"] / f["capital_mei"]) if f["capital_mei"] else 0
@@ -127,11 +126,11 @@ def textos(f):
                  f"O MEI pesa mais em **{uf}**, onde **{_br(prop * 100, 1)}%** das empresas ativas são MEI. "
                  "As barras mostram a divisão de cada lugar entre MEI, ME, EPP e Demais (todo MEI também tem "
                  "porte 01; ele é contado primeiro)."),
-        "ato2": (f"## 2. Capital social: a mediana em **{uf_cap}** é a mais alta, **R$ {_br(med_cap)}**\n"
-                 f"A mediana das Demais (R$ {_br(f['capital_demais'])}) é {_br(razao)} vezes a do MEI "
+        "ato2": (f"## 2. Capital social: a média em **{uf_cap}** é a mais alta, **R$ {_br(media_cap)}**\n"
+                 f"A média das Demais (R$ {_br(f['capital_demais'])}) é {_br(razao)} vezes a do MEI "
                  f"(R$ {_br(f['capital_mei'])}). **Capital social é o valor declarado na abertura**, não faturamento "
-                 "nem lucro, que a base não tem. A mediana é a medida principal: há muitos MEIs com R$ 1 e erros de "
-                 "cadastro na casa dos bilhões, que distorcem a soma."),
+                 "nem lucro, que a base não tem. Cadastros com valores na casa dos bilhões puxam a média para cima: "
+                 "ela serve para comparar lugares e categorias, não como o capital de uma empresa típica."),
         "ato3": (f"## 3. No mês, abriram **{_br(aberturas)}** empresas e **{_br(baixas)}** foram baixadas: "
                  f"saldo de **{sinal}{_br(aberturas - baixas)}**\n"
                  f"**{_br(pct_mei_aberturas * 100)}%** das aberturas são de MEI. Eventos tirados do Change Data "
@@ -164,10 +163,9 @@ def perguntas():
          f"SELECT {por_mes}, AVG((id_categoria = 'MEI')::int) AS participacao FROM fato_empresa_mensal "
          "GROUP BY 1 ORDER BY 1",
          "smartscalar", {"column_settings": {'["name","participacao"]': PERCENTUAL}}),
-        ("Mediana do capital social",
-         f"SELECT {por_mes}, percentile_cont(0.5) WITHIN GROUP (ORDER BY capital_social) AS mediana "
-         "FROM fato_empresa_mensal GROUP BY 1 ORDER BY 1",
-         "smartscalar", {"column_settings": {'["name","mediana"]': REAIS}}),
+        ("Média do capital social",
+         f"SELECT {por_mes}, AVG(capital_social) AS media FROM fato_empresa_mensal GROUP BY 1 ORDER BY 1",
+         "smartscalar", {"column_settings": {'["name","media"]': REAIS}}),
         ("Saldo do mês (aberturas − baixas)",
          "SELECT SUM(CASE tipo_evento WHEN 'abertura' THEN qtd_eventos WHEN 'baixa' THEN -qtd_eventos ELSE 0 END) "
          f"AS saldo FROM mv_movimentacao_uf WHERE ano_mes = {_mes('mv_movimentacao_uf')}",
@@ -193,22 +191,22 @@ def perguntas():
                  "series_settings": _cor("participacao_mei", COR_CATEGORIA["MEI"]),
                  "column_settings": {'["name","participacao_mei"]': PERCENTUAL}}),
     ]
-    capital = {"series_settings": _cor("mediana", COR_CAPITAL), "graph.show_values": True,
-               "graph.metrics": ["mediana"], "column_settings": {'["name","mediana"]': REAIS}}
+    capital = {"series_settings": _cor("media", COR_CAPITAL), "graph.show_values": True,
+               "graph.metrics": ["media"], "column_settings": {'["name","media"]': REAIS}}
     ato2 = [
-        ("Mediana do capital social por UF",
-         "SELECT sigla_uf AS uf, mediana_capital_social AS mediana FROM mv_capital_uf "
-         f"WHERE ano_mes = {_mes('mv_capital_uf')} ORDER BY mediana DESC",
+        ("Média do capital social por UF",
+         "SELECT sigla_uf AS uf, media_capital_social AS media FROM mv_capital_uf "
+         f"WHERE ano_mes = {_mes('mv_capital_uf')} ORDER BY media DESC",
          "row", {**capital, "graph.dimensions": ["uf"]}),
-        ("Mediana do capital social por categoria",
-         "SELECT c.nome AS categoria, percentile_cont(0.5) WITHIN GROUP (ORDER BY f.capital_social) AS mediana "
+        ("Média do capital social por categoria",
+         "SELECT c.nome AS categoria, AVG(f.capital_social) AS media "
          "FROM fato_empresa_mensal f JOIN dim_categoria c USING (id_categoria) "
-         "WHERE f.ano_mes = (SELECT MAX(ano_mes) FROM fato_empresa_mensal) GROUP BY c.nome ORDER BY mediana DESC",
+         "WHERE f.ano_mes = (SELECT MAX(ano_mes) FROM fato_empresa_mensal) GROUP BY c.nome ORDER BY media DESC",
          "row", {**capital, "graph.dimensions": ["categoria"]}),
-        ("Municípios com maior mediana de capital social (mín. 200 empresas)",
-         "SELECT municipio || ' (' || sigla_uf || ')' AS municipio, mediana_capital_social AS mediana "
+        ("Municípios com maior média de capital social (mín. 200 empresas)",
+         "SELECT municipio || ' (' || sigla_uf || ')' AS municipio, media_capital_social AS media "
          f"FROM mv_capital_municipio WHERE ano_mes = {_mes('mv_capital_municipio')} AND qtd_empresas >= 200 "
-         "ORDER BY mediana DESC LIMIT 10",
+         "ORDER BY media DESC LIMIT 10",
          "row", {**capital, "graph.dimensions": ["municipio"]}),
     ]
     ato3 = [
